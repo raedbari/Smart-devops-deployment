@@ -1,0 +1,88 @@
+
+# 📝 Issue & Fix Summary
+
+## 📌 What the "stupid script" did
+
+* Executed aggressive cleanup commands:
+
+  * `crictl rmi --prune` → removed all core system images (apiserver, controller, scheduler, etcd, proxy, pause).
+  * `crictl rm -af` → deleted all containers (including **static pods** for the control plane).
+  * Deleted Evicted/Completed pods arbitrarily.
+  * Cleaned up journal logs.
+* **Result**:
+
+  1. **Control Plane stopped completely** because kubelet could not find required system images.
+  2. **DNS (CoreDNS) broke**, `nslookup kubernetes.default` returned NXDOMAIN.
+  3. Errors appeared about missing sandbox image (`pause`).
+  4. Cluster looked empty/broken (0/0 replicas).
+
+---
+
+## 📌 Additional kubelet impact
+
+* Because the script removed the `pause` image and control-plane images,
+  the **kubelet was unable to start the static pods** for the control plane.
+* **Result**: the API Server stopped (port `6443` was closed),
+  which meant `kubectl` could not communicate with the cluster at all.
+
+---
+
+## 📌 How we fixed the damage
+
+1. **Restored core system images**:
+
+   * Pulled back `pause` + control-plane images manually.
+   * Updated `containerd` config with the correct `sandbox_image`.
+   * Restarted `containerd` and `kubelet`.
+
+2. **Brought Control Plane back online**:
+
+   * With the images restored, static pods (`kube-apiserver`, `controller-manager`, `scheduler`, `etcd`) came back.
+
+3. **Fixed CoreDNS**:
+
+   * Cleaned up `coredns` ConfigMap (removed invalid directives).
+   * Run `rollout restart` on the `coredns` deployment.
+   * Verified with `nslookup kubernetes.default` (DNS resolution OK).
+
+4. **Cleaned and redeployed apps**:
+
+   * Removed Completed/Failed pods (0/1 or 0/0).
+   * Restarted important deployments (`frontend`, `platform-api`).
+   * Verified pods reached **Running (1/1)**.
+
+---
+
+## 📌 Final outcome
+
+✅ Control Plane is fully operational again.
+✅ CoreDNS works and resolves service names.
+✅ Key deployments (frontend + platform-api) are running.
+✅ Old/empty pods were safely removed.
+
+---
+
+## 📌 Lessons learned
+
+* Never run **`crictl prune / rm -af`** blindly on production clusters.
+* Core system images (control-plane + pause) must never be removed.
+* Always validate CoreDNS ConfigMap before applying changes.
+* After any cleanup, always check cluster health with:
+
+  * `kubectl get nodes`
+  * `kubectl get pods -A`
+
+---
+
+Here are the images you must never delete or clear from cache in Kubernetes:
+
+* **pause** → sandbox container, required for every pod.
+* **kube-apiserver** → API entrypoint, without it `kubectl` cannot talk to cluster.
+* **kube-controller-manager** → manages controllers (deployments, replicasets).
+* **kube-scheduler** → schedules pods onto nodes.
+* **etcd** → key-value store, holds all cluster state.
+* **kube-proxy** → handles Service networking/routing.
+* **CoreDNS** → internal DNS, required for service discovery.
+
+👉 If you delete any of these, the cluster will break (control-plane down, no scheduling, or DNS failures).
+
