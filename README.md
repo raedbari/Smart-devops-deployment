@@ -168,8 +168,3 @@ rango-project.duckdns.org (TLS via cert-manager)
 ```
 
 ---
-
-### Summary
-
-This project delivers a small, production-like DevOps control plane on a single EC2 host: build and ship containers, deploy to Kubernetes, scale workloads, perform Blue/Green releases, and observe everything in Grafana—securely and cost-effectively.
-
