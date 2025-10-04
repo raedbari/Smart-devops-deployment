@@ -1,96 +1,175 @@
 # Smart DevOps Deployment  
-**Building an Intelligent Infrastructure for Auto Deployment and Monitoring Using Modern DevOps Tools**
-
-## Project Overview
-This project aims to design and implement a smart and automated cloud infrastructure for deploying and monitoring containerized applications using modern DevOps tools such as **Terraform**, **Docker**, **Kubernetes**, **GitHub Actions**, and **AWS**.  
-The infrastructure follows **Infrastructure-as-Code (IaC)** principles to ensure reproducibility, scalability, and maintainability.  
-
-In later stages, additional tools such as **Ansible**, **Prometheus**, **Loki**, and **Chaos Mesh** will be integrated to provide configuration automation, advanced monitoring, centralized logging, and resilience testing.
+Here’s a clean, English version you can paste into your GitHub README:
 
 ---
 
-## Implementation Summary
+# Smart DevOps — Graduation Project
 
-### 1. AWS Infrastructure Provisioning with Terraform
-- Created a VPC, subnets, security groups, and an EC2 instance using **Terraform**.
-- Used **root_block_device** configuration to define storage size and properties.
-- Ensured that all infrastructure is reproducible and version-controlled.
-
-### 2. EC2 Preparation
-- Accessed the instance via SSH for environment setup.
-- Installed **Docker** and **Kubernetes** manually to host and orchestrate containerized workloads.
-
-### 3. Continuous Integration (CI) with GitHub Actions
-- Configured a CI workflow that automatically builds a **Docker image** for the Node.js application from the repository [node.js-app](https://github.com/raedbari/node.js-app).
-- The image is tagged with both:
-  - `latest` (for quick deployment/testing)
-  - The **commit SHA** (for traceability and rollback)
-- Images are pushed to **Docker Hub** using secure credentials stored in GitHub Secrets.
-
-### 4. Kubernetes Deployment
-- The Node.js application is deployed to Kubernetes as a **Deployment** resource (manifest stored in a separate file).
-- The Deployment ensures:
-  - High availability through ReplicaSets
-  - Rolling updates for zero-downtime deployments
-  - Easy rollback to previous versions
-- The application is exposed via a **NodePort Service** for both internal and external access.
+A lightweight, cost-efficient DevOps platform running on a single AWS EC2 instance. It builds and deploys containerized apps to a self-managed Kubernetes cluster, exposes them securely via Ingress + TLS, and provides simple UI flows for **Deploy**, **Scale**, **Status**, and **Blue/Green** releases with direct links to **Grafana** dashboards.
 
 ---
 
-## Challenges and Solutions
+## 1) Infrastructure (AWS)
 
-### 1. Node Taint – `node.kubernetes.io/disk-pressure`
-- **Issue**: Kubernetes prevented scheduling due to disk pressure.
-- **Cause**: Node reported low available storage.
-- **Solution**:
-  - Freed unused space.
-  - Removed taint:
-    ```bash
-    kubectl taint nodes node1 node.kubernetes.io/disk-pressure:NoSchedule-
+* **EC2**: `t3.medium`, 30GB disk, public **Elastic IP**.
+* **Networking**: custom **VPC** with a **Public Subnet**, **Internet Gateway**, and route table for internet access.
+* **Security Group**: SSH (22), HTTP/HTTPS, and required ports for monitoring and experimental NodePorts.
+* **Cost focus**: no ELB and no EKS. We run **Kubernetes manually on EC2** to stay flexible and minimize cost.
+* **Stable DNS**: **DuckDNS** bound to the Elastic IP.
+
+---
+
+## 2) Kubernetes Layout
+
+Namespaces used in the cluster:
+
+* `project-env` — primary project apps (frontend/backend when promoted there).
+* `monitoring` — Prometheus / Grafana / Loki + Promtail.
+* `ingress-nginx` — Ingress controller.
+* `cert-manager` — certificate automation.
+* `default` — experimental or temporary workloads (currently includes `platform-api` in our setup).
+
+Each app runs as a **Deployment → ReplicaSet → Pods**, fronted by a **Service** (`ClusterIP` for internal traffic; `NodePort` only used for early experiments).
+
+---
+
+## 3) Ingress & TLS
+
+* **Controller**: `ingress-nginx`.
+* **Public host**: `rango-project.duckdns.org`.
+* **Rules**:
+
+  * `/` → **frontend** Service on port **3000**.
+  * `/api(/|$)(.*)` → **platform-api** Service on port **8000**, with:
+
     ```
-
-### 2. Node Volume Size Limitation (9 GB)
-- **Issue**: EC2 instance had only 9 GB root volume, causing storage constraints.
-- **Solution**:
-  - Increased the volume size to **20 GB** by updating the Terraform configuration (`root_block_device` volume_size).
-
-### 3. Pods Stuck in `ContainerStatusUnknown`
-- **Issue**: Several pods were stuck and not terminating properly.
-- **Cause**: Old pods from previous ReplicaSets and kubelet communication issues.
-- **Solution**:
-  - Forced deletion of stuck pods:
-    ```bash
-    kubectl delete pod <pod-name> --force --grace-period=0
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
     ```
-  - Restarted the deployment:
-    ```bash
-    kubectl -n project-env rollout restart deploy/project-dep
-    ```
+* **TLS**: `cert-manager` issues Let’s Encrypt certificates (staging & prod `ClusterIssuer`) via HTTP-01 on the nginx Ingress class.
 
 ---
 
-## Next Steps
-- Integrate **Ansible** for automated configuration management.
-- Set up **Prometheus** for metrics collection and alerting.
-- Implement **Loki** for centralized logging.
-- Use **Chaos Mesh** for resilience and fault injection testing.
-- Enhance security and cost optimization strategies on AWS.
+## 4) Observability Stack
+
+* **Prometheus** (via kube-prometheus-stack) for metrics.
+* **Grafana** for dashboards (exposed through Ingress on the same host).
+* **Loki + Promtail** for logs.
+* The web UI links each app to its corresponding **Grafana dashboard** (either via a backend helper endpoint or a direct front-end redirect).
 
 ---
 
-## Repository Structure
+## 5) Backend — `platform-api` (FastAPI)
+
+A single FastAPI service that manages Kubernetes resources and release flows.
+
+### Key environment variables
+
+* `ALLOWED_ORIGINS` (CORS), `FRONTEND_ORIGIN`, `DEFAULT_NAMESPACE`
+* `GRAFANA_URL`, `GRAFANA_TOKEN`
+* `PROM_URL`, `LOKI_URL`
+* JWT settings: `JWT_SECRET`, `JWT_EXP_HOURS`
+
+### Probes & Port
+
+* Runs on **8000**, with `GET /healthz` for liveness/readiness.
+
+### Main endpoints
+
+* `GET /healthz` — health check
+* `GET /` — welcome message
+* `POST /_debug/validate-appspec` — validate an AppSpec (convenience)
+* **Apps**
+
+  * `POST /apps/deploy` — create/patch Deployment + Service for a given app spec
+  * `POST /apps/scale` — scale Deployment replicas
+  * `GET /apps/status` — list app status (namespace, image, desired/current/available/updated)
+* **Blue/Green**
+
+  * `POST /apps/bluegreen/prepare` — create a **preview** deployment and ensure Service targets **active**
+  * `POST /apps/bluegreen/promote` — swap preview → active (labels/selectors)
+  * `POST /apps/bluegreen/rollback` — revert to previously active
+
+> Access to K8s is scoped via a dedicated **ServiceAccount** and **RBAC** (Role/ClusterRole + Bindings) to grant only the necessary permissions.
+
+---
+
+## 6) Frontend — Next.js
+
+A minimal control plane UI with three flows:
+
+* **Deploy App**: enter image/tag/port/health paths, namespace, env vars → calls `/apps/deploy`.
+* **Apps Status**: table that fetches from `/apps/status`, shows (namespace/name/image/desired/current/available/updated), and provides:
+
+  * **Scale** dialog → calls `/apps/scale`
+  * **Open in Grafana** button → takes you to the app dashboard
+* **Blue/Green**: three buttons (**Prepare / Promote / Rollback**) that call the corresponding backend endpoints.
+
+### Environment
+
+* `NEXT_PUBLIC_API_BASE=https://rango-project.duckdns.org/api`
+* `SSR_API_BASE=http://platform-api.default.svc.cluster.local:8000`
+
+---
+
+## 7) CI/CD
+
+There are **two repositories**:
+
+* **Frontend (Next.js)**
+* **Backend (FastAPI)**
+
+For both:
+
+* **GitHub Actions** on `main`:
+
+  1. Build Docker image
+  2. Push to **Docker Hub** (tagged by commit SHA)
+  3. **kubectl** rollout to the EC2-hosted cluster:
+
+     * Patch the Deployment image
+     * Annotate with commit metadata
+     * Wait for a successful **rollout**
+
+---
+
+## 8) Request Flow (End-to-End)
+
+1. The browser calls `https://rango-project.duckdns.org/api/...`.
+2. Ingress **rewrites** and forwards to the **platform-api** Service (`:8000`).
+3. The backend talks to the K8s API to deploy/scale/list status or run Blue/Green flows.
+4. The UI shows current state, allows scaling, and links to **Grafana** for dashboards.
+
+---
+
+## 9) Why this Design
+
+* **Cost & control**: one EC2 + self-managed Kubernetes instead of managed services.
+* **Simplicity**: a single public host with Ingress and TLS covers frontend, API, and observability.
+* **Separation of concerns**: independent repos and pipelines for frontend and backend.
+* **Safe releases**: Blue/Green handled by simple API calls and a clear UI.
+
+---
+
+## Quick Architecture Sketch
+
 ```
-terraform/         → Infrastructure-as-Code for AWS setup
-node.js-app/       → Node.js application + Dockerfile + CI pipeline
-k8s/               → Kubernetes manifests (Deployment, Service, etc.)
-README.md          → Project documentation
+Internet
+   │
+   ▼
+rango-project.duckdns.org (TLS via cert-manager)
+   │
+   ├── Ingress (nginx)
+   │     ├── "/"      → Service: frontend :3000 → Next.js UI
+   │     └── "/api/*" → Service: platform-api :8000 → FastAPI → K8s API
+   │
+   └── Grafana (same host via Ingress)
+         └── Prometheus / Loki (+ Promtail) in "monitoring" namespace
 ```
 
 ---
 
-## Status
-- ✅ AWS infrastructure deployed via Terraform
-- ✅ EC2 prepared with Docker & Kubernetes
-- ✅ CI pipeline functional via GitHub Actions
-- ✅ Node.js app deployed to Kubernetes
-- ⏳ Advanced monitoring, logging, and automation planned
+### Summary
+
+This project delivers a small, production-like DevOps control plane on a single EC2 host: build and ship containers, deploy to Kubernetes, scale workloads, perform Blue/Green releases, and observe everything in Grafana—securely and cost-effectively.
+
