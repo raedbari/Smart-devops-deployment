@@ -1,5 +1,4 @@
 # Smart DevOps Deployment  
-Here’s a clean, English version you can paste into your GitHub README:
 
 ---
 
