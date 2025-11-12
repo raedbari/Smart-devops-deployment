@@ -1,169 +1,216 @@
-# Smart DevOps Deployment  
+# 🚀 SmartDevOps Platform
+
+A smart platform for managing and deploying **multi-tenant applications** on **Kubernetes**,  
+built with **FastAPI**, **Next.js**, and integrated **Prometheus / Grafana / Alertmanager** monitoring.
 
 ---
 
-# Smart DevOps — Graduation Project
+## 🧠 Overview
 
-A lightweight, cost-efficient DevOps platform running on a single AWS EC2 instance. It builds and deploys containerized apps to a self-managed Kubernetes cluster, exposes them securely via Ingress + TLS, and provides simple UI flows for **Deploy**, **Scale**, **Status**, and **Blue/Green** releases with direct links to **Grafana** dashboards.
-
----
-
-## 1) Infrastructure (AWS)
-
-* **EC2**: `t3.medium`, 30GB disk, public **Elastic IP**.
-* **Networking**: custom **VPC** with a **Public Subnet**, **Internet Gateway**, and route table for internet access.
-* **Security Group**: SSH (22), HTTP/HTTPS, and required ports for monitoring and experimental NodePorts.
-* **Cost focus**: no ELB and no EKS. We run **Kubernetes manually on EC2** to stay flexible and minimize cost.
-* **Stable DNS**: **DuckDNS** bound to the Elastic IP.
+**SmartDevOps** is an intelligent DevOps platform designed to automate the full application lifecycle in Kubernetes.  
+It bridges simplicity for **clients** and precision for **DevOps engineers**, providing each tenant with full control, monitoring, and instant alerting —  
+while maintaining strict multi-tenant isolation and security.
 
 ---
 
-## 2) Kubernetes Layout
+## 💡 Problem & Solution
 
-Namespaces used in the cluster:
-
-* `project-env` — primary project apps (frontend/backend when promoted there).
-* `monitoring` — Prometheus / Grafana / Loki + Promtail.
-* `ingress-nginx` — Ingress controller.
-* `cert-manager` — certificate automation.
-* `default` — experimental or temporary workloads (currently includes `platform-api` in our setup).
-
-Each app runs as a **Deployment → ReplicaSet → Pods**, fronted by a **Service** (`ClusterIP` for internal traffic; `NodePort` only used for early experiments).
-
----
-
-## 3) Ingress & TLS
-
-* **Controller**: `ingress-nginx`.
-* **Public host**: `rango-project.duckdns.org`.
-* **Rules**:
-
-  * `/` → **frontend** Service on port **3000**.
-  * `/api(/|$)(.*)` → **platform-api** Service on port **8000**, with:
-
-    ```
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    ```
-* **TLS**: `cert-manager` issues Let’s Encrypt certificates (staging & prod `ClusterIssuer`) via HTTP-01 on the nginx Ingress class.
+| Problem | Solution |
+|----------|-----------|
+| **Slow release deployments** | Implements **Blue-Green Deployment** for zero downtime updates. |
+| **Hard rollback process** | One-click **Rollback** instantly restores the previous version. |
+| **Temporary service outage during update** | Traffic is switched only after successful readiness probes. |
+| **Clients unaware of failures** | **Alertmanager** sends real-time email alerts on failures. |
+| **No visibility or monitoring** | **Grafana Dashboards** per tenant with metrics and status. |
+| **Low port numbers cause failures** | Automatically replaces ports <1024 with **8080**. |
+| **Shared access between clients** | Each tenant has its own **Namespace + RBAC + ResourceQuota**. |
+| **Manual client provisioning** | Automated **tenant approval and namespace creation** from Admin panel. |
+| **Complex operations** | Simple UI — click “Open App” → `https://<app>.<tenant>.apps.smartdevops.lat` |
 
 ---
 
-## 4) Observability Stack
+## 🏗️ Architecture
 
-* **Prometheus** (via kube-prometheus-stack) for metrics.
-* **Grafana** for dashboards (exposed through Ingress on the same host).
-* **Loki + Promtail** for logs.
-* The web UI links each app to its corresponding **Grafana dashboard** (either via a backend helper endpoint or a direct front-end redirect).
+📘 Full diagram available here:  
+[`/docs/architecture.drawio`](https://github.com/USERNAME/SmartDevOps/blob/main/docs/architecture.drawio)
 
----
-
-## 5) Backend — `platform-api` (FastAPI)
-
-A single FastAPI service that manages Kubernetes resources and release flows.
-
-### Key environment variables
-
-* `ALLOWED_ORIGINS` (CORS), `FRONTEND_ORIGIN`, `DEFAULT_NAMESPACE`
-* `GRAFANA_URL`, `GRAFANA_TOKEN`
-* `PROM_URL`, `LOKI_URL`
-* JWT settings: `JWT_SECRET`, `JWT_EXP_HOURS`
-
-### Probes & Port
-
-* Runs on **8000**, with `GET /healthz` for liveness/readiness.
-
-### Main endpoints
-
-* `GET /healthz` — health check
-* `GET /` — welcome message
-* `POST /_debug/validate-appspec` — validate an AppSpec (convenience)
-* **Apps**
-
-  * `POST /apps/deploy` — create/patch Deployment + Service for a given app spec
-  * `POST /apps/scale` — scale Deployment replicas
-  * `GET /apps/status` — list app status (namespace, image, desired/current/available/updated)
-* **Blue/Green**
-
-  * `POST /apps/bluegreen/prepare` — create a **preview** deployment and ensure Service targets **active**
-  * `POST /apps/bluegreen/promote` — swap preview → active (labels/selectors)
-  * `POST /apps/bluegreen/rollback` — revert to previously active
-
-> Access to K8s is scoped via a dedicated **ServiceAccount** and **RBAC** (Role/ClusterRole + Bindings) to grant only the necessary permissions.
+Open it with **draw.io / diagrams.net** to view all connections:  
+Frontend → FastAPI API → Kubernetes API → Prometheus / Grafana / Alertmanager
 
 ---
 
-## 6) Frontend — Next.js
+## ⚙️ Technologies
 
-A minimal control plane UI with three flows:
-
-* **Deploy App**: enter image/tag/port/health paths, namespace, env vars → calls `/apps/deploy`.
-* **Apps Status**: table that fetches from `/apps/status`, shows (namespace/name/image/desired/current/available/updated), and provides:
-
-  * **Scale** dialog → calls `/apps/scale`
-  * **Open in Grafana** button → takes you to the app dashboard
-* **Blue/Green**: three buttons (**Prepare / Promote / Rollback**) that call the corresponding backend endpoints.
-
-### Environment
-
-* `NEXT_PUBLIC_API_BASE=https://rango-project.duckdns.org/api`
-* `SSR_API_BASE=http://platform-api.default.svc.cluster.local:8000`
+| Layer | Stack |
+|-------|--------|
+| **Frontend** | Next.js · TypeScript · TailwindCSS · Framer Motion |
+| **Backend** | FastAPI · SQLAlchemy · PostgreSQL |
+| **Monitoring** | Prometheus · Grafana · Alertmanager |
+| **Containerization** | Docker · Kubernetes · Ingress NGINX |
+| **Security** | JWT Auth · RBAC · Secrets · ConfigMaps |
+| **CI/CD** | GitHub Actions · Blue-Green Deployment |
 
 ---
 
-## 7) CI/CD
+## 📂 Project Structure
 
-There are **two repositories**:
+### 🧩 Backend (FastAPI)
 
-* **Frontend (Next.js)**
-* **Backend (FastAPI)**
-
-For both:
-
-* **GitHub Actions** on `main`:
-
-  1. Build Docker image
-  2. Push to **Docker Hub** (tagged by commit SHA)
-  3. **kubectl** rollout to the EC2-hosted cluster:
-
-     * Patch the Deployment image
-     * Annotate with commit metadata
-     * Wait for a successful **rollout**
-
----
-
-## 8) Request Flow (End-to-End)
-
-1. The browser calls `https://rango-project.duckdns.org/api/...`.
-2. Ingress **rewrites** and forwards to the **platform-api** Service (`:8000`).
-3. The backend talks to the K8s API to deploy/scale/list status or run Blue/Green flows.
-4. The UI shows current state, allows scaling, and links to **Grafana** for dashboards.
-
----
-
-## 9) Why this Design
-
-* **Cost & control**: one EC2 + self-managed Kubernetes instead of managed services.
-* **Simplicity**: a single public host with Ingress and TLS covers frontend, API, and observability.
-* **Separation of concerns**: independent repos and pipelines for frontend and backend.
-* **Safe releases**: Blue/Green handled by simple API calls and a clear UI.
-
----
-
-## Quick Architecture Sketch
-
-```
-Internet
-   │
-   ▼
-rango-project.duckdns.org (TLS via cert-manager)
-   │
-   ├── Ingress (nginx)
-   │     ├── "/"      → Service: frontend :3000 → Next.js UI
-   │     └── "/api/*" → Service: platform-api :8000 → FastAPI → K8s API
-   │
-   └── Grafana (same host via Ingress)
-         └── Prometheus / Loki (+ Promtail) in "monitoring" namespace
+```bash
+app/
+├── auth.py            # JWT login & context
+├── onboarding.py      # Tenant lifecycle (NS/Quota/RBAC)
+├── k8s_ops.py         # Deploy/Service/Scale/Blue-Green
+├── monitor.py         # Grafana URL endpoints
+├── models.py          # Pydantic & SQLAlchemy models
+├── config.py          # Env/ConfigMap settings
+├── db.py              # SQLAlchemy engine/session
+├── k8s_client.py      # Kubernetes client initialization
+├── mailer.py          # SMTP email helper
+├── main.py            # FastAPI app entrypoint
+└── alerts/
+    └── webhook.py     # Alertmanager → Email notifications
 ```
 
 ---
+
+### 💻 Frontend (Next.js)
+
+```bash
+.github/
+└── workflows/
+    └── ci.yaml                     # GitHub Actions: Build & Deploy Frontend to Kubernetes
+
+app/
+├── apis/
+│   └── bluegreen.ts                # REST calls to backend for Blue-Green operations
+│
+├── auth/                           # Authentication & onboarding pages
+│   ├── contact/page.tsx            # Contact or support form
+│   ├── docs/page.tsx               # User documentation / guide
+│   ├── login/page.tsx              # Login form with JWT authentication
+│   ├── pending/page.tsx            # Tenant pending approval
+│   ├── signup/page.tsx             # Signup for new tenants
+│   └── layout.tsx                  # Layout wrapper for auth pages
+│
+├── dashboard/                      # Main dashboard after login
+│   ├── admin/tenants/page.tsx      # Admin page to approve/reject tenants
+│   ├── apps/
+│   │   ├── bluegreen/page.tsx      # Blue-Green deployment UI
+│   │   ├── deploy/page.tsx         # Deploy new app interface
+│   │   └── page.tsx                # Apps table (status, scale, open, Grafana)
+│   ├── layout.tsx                  # Dashboard layout (header, sidebar)
+│   └── page.tsx                    # Dashboard home
+│
+├── globals.css                     # Global TailwindCSS styles
+└── layout.tsx                      # Root layout (theme, metadata)
+│
+components/
+├── BlueGreenActions.tsx            # Actions (prepare/promote/rollback)
+├── PrepareModal.tsx                # Modal for preparing new version
+├── PromoteModal.tsx                # Modal for promoting version
+├── RollbackModal.tsx               # Modal for rollback
+├── RequireAuth.tsx                 # Route guard (JWT validation)
+└── ui.tsx                          # Shared UI components
+│
+lib/                                # Helper utilities
+├── (api.ts / auth.ts / adminClient.ts ...) # API wrappers, token helpers, etc.
+│
+public/                             # Static assets (logos, images)
+│
+.dockerignore
+.gitignore
+Dockerfile                          # Frontend image build
+eslint.config.mjs                   # ESLint for TypeScript
+middleware.ts                       # Auth middleware
+next.config.ts                      # Next.js runtime config
+package.json                        # Dependencies & scripts
+package-lock.json
+postcss.config.js / .mjs            # Tailwind/PostCSS setup
+tailwind.config.js                  # Theme config
+tsconfig.json                       # TypeScript config
+README.md                           # Documentation
+```
+
+---
+
+## 🚀 CI/CD Pipeline
+
+All deployments are **automated** through **GitHub Actions** on every push to `main`.
+
+### 🔹 Backend CI (`.github/workflows/backend-ci.yml`)
+
+**Steps:**
+1. **Build & Push Docker Image**
+   ```bash
+   docker buildx build -t raedbari/platform-api:${GITHUB_SHA} .
+   docker push raedbari/platform-api:${GITHUB_SHA}
+   ```
+
+2. **Deploy to Kubernetes**
+   ```bash
+   kubectl -n default set image deploy/platform-api api=raedbari/platform-api:${GITHUB_SHA}
+   kubectl -n default rollout status deploy/platform-api --timeout=300s
+   ```
+
+---
+
+### 🔹 Frontend CI (`.github/workflows/ci.yaml`)
+
+**Steps:**
+1. **Build & Push Docker Image**
+   ```bash
+   docker buildx build -t raedbari/frontend:${GITHUB_SHA} .
+   docker push raedbari/frontend:${GITHUB_SHA}
+   ```
+
+2. **Deploy to Kubernetes**
+   ```bash
+   kubectl -n default set image deploy/frontend frontend=raedbari/frontend:${GITHUB_SHA}
+   kubectl -n default rollout status deploy/frontend --timeout=300s
+   ```
+
+---
+
+## 📊 Monitoring & Alerting
+
+* **Prometheus** — collects performance metrics (CPU, Memory, Pod status)
+* **Alertmanager** — sends email alerts immediately when any service fails
+* **Grafana Dashboards:**
+  * *Client View* — simple overview for clients
+  * *DevOps View* — advanced metrics and logs via Loki
+
+---
+
+## 🔐 Security
+
+* Each tenant runs in an isolated **Namespace** with dedicated **ResourceQuota**.
+* **RBAC** ensures strict permission separation.
+* HTTPS enforced using **Let’s Encrypt certificates**.
+* Authentication via **JWT tokens** for API and UI.
+
+---
+
+## 🧱 Key Features
+
+✅ Multi-Tenant Isolation  
+✅ Blue-Green Deployment  
+✅ Prometheus Monitoring  
+✅ Grafana Dashboards  
+✅ Alertmanager Notifications  
+✅ RBAC Security  
+✅ Rollback & Scaling  
+✅ Zero-Downtime Updates  
+
+---
+
+## 👤 About the Developer
+
+**Name:** Raed Abdulbari Abdullah Alrubaidi  
+**Role:** Junior DevOps Engineer  
+**Email:** [raedbari203@gmail.com](mailto:raedbari203@gmail.com)  
+**Website:** [https://smartdevops.lat](https://smartdevops.lat)
+
+---
+
+*Built with passion for automation, monitoring, and clean DevOps workflows.*
