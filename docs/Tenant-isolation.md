@@ -1,7 +1,6 @@
 
 ---
 
-````md
 # Tenant Isolation in Smart DevOps Platform
 
 The Smart DevOps Platform is designed as a **multi-tenant environment** where each customer operates inside an isolated Kubernetes namespace.  
