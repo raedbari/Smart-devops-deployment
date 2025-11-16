@@ -1,0 +1,19 @@
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - grafana.smartdevops.lat
+  path: /
+  pathType: Prefix
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  tls:
+    - hosts:
+        - grafana.smartdevops.lat
+      secretName: smartdevops-tls-prod
+
+grafana.ini:
+  server:
+    root_url: https://grafana.smartdevops.lat/
+    serve_from_sub_path: false

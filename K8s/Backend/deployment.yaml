@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-api
+  namespace: default
+spec:
+  replicas: 1
+  progressDeadlineSeconds: 300
+  selector:
+    matchLabels:
+      app: platform-api
+  template:
+    metadata:
+      labels:
+        app: platform-api
+        managed-by: cloud-devops-platform
+    spec:
+      serviceAccountName: platform-api
+      containers:
+        - name: api
+        
+          image: raedbari/platform-api:0.1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+
+          envFrom:
+            - secretRef:
+                name: platform-api-secret
+
+          env:
+            - name: GRAFANA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-token
+                  key: GRAFANA_TOKEN
+
+            - name: GRAFANA_URL
+              value: "https://smartdevops.lat/grafana"
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: JWT_SECRET
+
+            - name: JWT_EXP_HOURS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-api-config
+                  key: JWT_EXP_HOURS
+
+            - name: PROM_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-api-config
+                  key: PROM_URL
+
+            - name: LOKI_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-api-config
+                  key: LOKI_URL
+
+            - name: ALLOWED_NAMESPACES
+              value: "default"
+
+            # ✅ SMTP
+            - name: SMTP_HOST
+              value: "smtp.gmail.com"
+
+            - name: SMTP_PORT
+              value: "587"
+
+            - name: SMTP_USER
+              value: "raedbari203@gmail.com"
+
+            - name: SMTP_PASS
+              value: "plds tltg vvzu kgwr"
+
+            - name: SMTP_FROM
+              value: "Smart DevOps <admin@smartdevops.lat>"
+
+            - name: ADMIN_EMAIL
+              value: "raedbari203@gmail.com"
+
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+

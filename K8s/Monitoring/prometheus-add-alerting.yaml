@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-add-alerting
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+data:
+  prometheus.yml: |
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - "alertmanager-kps-kube-prometheus-stack-alertmanager:9093"

@@ -1,0 +1,26 @@
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: tenant-global-policy
+spec:
+  namespaceSelector: tenant == "true"
+  types:
+    - Ingress
+    - Egress
+  ingress:
+  - action: Allow
+    source:
+      namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
+  - action: Allow
+    source:
+      namespaceSelector: "tenant == 'true'"
+  egress:
+  - action: Allow
+    destination:
+      namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
+  - action: Allow
+    destination:
+      namespaceSelector: "kubernetes.io/metadata.name == 'kube-system'"
+      selector: "k8s-app == 'kube-dns'"
+  - action: Deny
+

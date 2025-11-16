@@ -1,0 +1,53 @@
+groups:
+  - name: smartdevops-alerts
+    rules:
+
+      # 🔴 Alert when a Pod enters Failed state
+      - alert: PodDown
+        expr: kube_pod_status_phase{phase="Failed"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "❌ Pod is down in {{ $labels.namespace }}"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is in Failed state."
+
+      # 🟡 Alert when a Pod stays too long in Pending
+      - alert: PodPendingTooLong
+        expr: kube_pod_status_phase{phase="Pending"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "⚠️ Pod stuck in Pending"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been Pending for more than 5 minutes."
+
+      # 🔴 Alert for high CPU usage
+      - alert: HighCPUUsage
+        expr: sum(rate(container_cpu_usage_seconds_total{container!="",namespace!=""}[5m])) by (namespace) > 0.8
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🔥 High CPU usage"
+          description: "Namespace {{ $labels.namespace }} is using more than 80% CPU for 3 minutes."
+
+      # 🟠 Alert for high memory usage
+      - alert: HighMemoryUsage
+        expr: sum(container_memory_usage_bytes{container!=""}) by (namespace) / sum(kube_pod_container_resource_limits_memory_bytes{container!=""}) by (namespace) > 0.9
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "💥 High memory usage"
+          description: "Namespace {{ $labels.namespace }} is using more than 90% of its allocated memory."
+
+      # 🔔 Alert when Prometheus itself is down
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is unavailable!"
+          description: "Prometheus has been down for more than 1 minute."

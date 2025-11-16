@@ -1,0 +1,23 @@
+# This file is optional and only used for testing Alertmanager integration.
+# Do NOT apply this in production unless testing.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: smartdevops-test-alert
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: smartdevops-test
+      rules:
+        - alert: SmartDevOpsTestAlert
+          expr: vector(1)
+          for: 1m
+          labels:
+            severity: warning
+            namespace: default
+          annotations:
+            summary: "Test alert for SmartDevOps alert webhook"
+            description: "This is a manual test alert to validate email notifications."

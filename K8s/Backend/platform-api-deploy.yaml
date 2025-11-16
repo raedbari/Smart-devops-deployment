@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-api
+  namespace: default
+  annotations:
+    ci.commit: "<CI_COMMIT_SHA>"
+    ci.tag: "<CI_TAG>"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-api
+
+  strategy:
+    type: Recreate
+
+  template:
+    metadata:
+      labels:
+        app: platform-api
+        managed-by: cloud-devops-platform
+
+    spec:
+      serviceAccountName: platform-api
+
+      containers:
+      - name: api
+        image: raedbari/platform-api:<TAG>
+        imagePullPolicy: Always
+
+        env:
+        - name: SMTP_HOST
+          value: "smtp.gmail.com"
+
+        - name: SMTP_PORT
+          value: "587"
+
+        - name: SMTP_USER
+          value: "<SMTP_USER>"
+
+        - name: SMTP_PASS
+          value: "<SMTP_APP_PASSWORD>"   # 🔒 masked
+
+        - name: SMTP_FROM
+          value: "Smart DevOps <admin@smartdevops.lat>"
+
+        - name: ADMIN_EMAIL
+          value: "<ADMIN_EMAIL>"
+
+        - name: GRAFANA_URL
+          value: "https://<your-domain>/grafana"
+
+        - name: ALLOWED_NAMESPACES
+          value: "default"
+
+        envFrom:
+        - secretRef:
+            name: platform-api-secret
+
+        ports:
+        - containerPort: 8000
+          name: http
+
+        readinessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 20m
+            memory: 64Mi

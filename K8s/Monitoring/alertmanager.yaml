@@ -1,0 +1,58 @@
+global:
+  resolve_timeout: 10m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'Smart DevOps Alerts <raedbari203@gmail.com>'
+  smtp_auth_username: 'raedbari203@gmail.com'
+  smtp_auth_password: 'plds tltg vvzu kgwr'   # ⚠️ Do NOT share this publicly
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'namespace']
+  group_wait: 1m
+  group_interval: 10m
+  repeat_interval: 12h
+  receiver: 'null'
+
+  routes:
+    # 🟥 Send only critical alerts to email
+    - match:
+        severity: 'critical'
+      receiver: 'default-email'
+      continue: false
+
+    # 🚫 Ignore warning or info level alerts
+    - match_re:
+        severity: 'warning|info'
+      receiver: 'null'
+      continue: false
+
+    # 🚫 Ignore internal system alerts
+    - match_re:
+        alertname: 'TargetDown|etcdMembersDown|KubeControllerManagerDown|KubeSchedulerDown|KubeProxyDown|InfoInhibitor'
+      receiver: 'null'
+      continue: false
+
+    # 🌐 Send all other alerts to the webhook (no email)
+    - match_re:
+        namespace: .*
+      receiver: 'webhook-smartdevops'
+      continue: false
+
+receivers:
+  - name: 'default-email'
+    email_configs:
+      - to: 'raedbari203@gmail.com'
+        send_resolved: true
+        headers:
+          subject: '[SmartDevOps] {{ template "email.default.subject" . }}'
+        html: '{{ template "email.default.html" . }}'
+
+  - name: 'webhook-smartdevops'
+    webhook_configs:
+      - url: 'https://smartdevops.lat/api/alerts'
+        send_resolved: true
+
+  - name: 'null'
+
+templates:
+  - '/etc/alertmanager/*.tmpl'

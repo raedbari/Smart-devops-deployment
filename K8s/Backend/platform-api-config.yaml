@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-api-config
+  namespace: default
+data:
+  DATABASE_URL: postgresql+psycopg2://platform:CHANGE_ME_PASSWORD@pg.default.svc.cluster.local:5432/platformdb
+  FRONTEND_ORIGIN: https://smartdevops.lat
+  JWT_EXP_HOURS: "12"
+  PROM_URL: http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+  LOKI_URL: http://loki.monitoring.svc:3100
