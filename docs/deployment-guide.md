@@ -1,7 +1,7 @@
 
 ---
 
-````md
+
 # Smart DevOps Platform — Deployment Guide
 
 This guide explains how to deploy your **own instance** of the Smart DevOps Platform on your Kubernetes cluster.  
