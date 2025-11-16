@@ -1,7 +1,6 @@
 
 
 
-```md
 # 🚀 SmartDevOps Platform
 
 A smart and modern platform for deploying and managing **multi-tenant applications** on **Kubernetes**,  
