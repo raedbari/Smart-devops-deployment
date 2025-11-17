@@ -331,10 +331,11 @@ kubectl -n default rollout status deploy/frontend
 
 ## 👤 About the Developer
 
-**Name:** Raed Abdulbari Abdullah Alrubaidi
-**Role:** Junior DevOps Engineer
-**Email:** [raedbari203@gmail.com](mailto:raedbari203@gmail.com)
+**Name:** Raed Abdulbari Abdullah Alrubaidi  
+**Role:** Junior DevOps Engineer  
+**Email:** [raedbari203@gmail.com](mailto:raedbari203@gmail.com)  
 **Website:** [https://smartdevops.lat](https://smartdevops.lat)
+
 
 ---
 
