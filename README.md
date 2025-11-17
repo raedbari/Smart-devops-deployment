@@ -136,8 +136,63 @@ app/
 ### 💻 Frontend (Next.js)
 
 ```
+.github/
+└── workflows/
+    └── ci.yaml                      # GitHub Actions: Build & Deploy Frontend to Kubernetes
 
-bash .github/ └── workflows/ └── ci.yaml # GitHub Actions: Build & Deploy Frontend to Kubernetes app/ ├── apis/ │ └── bluegreen.ts # REST calls to backend for Blue-Green operations │ ├── auth/ # Authentication & onboarding pages │ ├── contact/page.tsx # Contact or support form │ ├── docs/page.tsx # User documentation / guide │ ├── login/page.tsx # Login form with JWT authentication │ ├── pending/page.tsx # Tenant pending approval │ ├── signup/page.tsx # Signup for new tenants │ └── layout.tsx # Layout wrapper for auth pages │ ├── dashboard/ # Main dashboard after login │ ├── admin/tenants/page.tsx # Admin page to approve/reject tenants │ ├── apps/ │ │ ├── bluegreen/page.tsx # Blue-Green deployment UI │ │ ├── deploy/page.tsx # Deploy new app interface │ │ └── page.tsx # Apps table (status, scale, open, Grafana) │ ├── layout.tsx # Dashboard layout (header, sidebar) │ └── page.tsx # Dashboard home │ ├── globals.css # Global TailwindCSS styles └── layout.tsx # Root layout (theme, metadata) │ components/ ├── BlueGreenActions.tsx # Actions (prepare/promote/rollback) ├── PrepareModal.tsx # Modal for preparing new version ├── PromoteModal.tsx # Modal for promoting version ├── RollbackModal.tsx # Modal for rollback ├── RequireAuth.tsx # Route guard (JWT validation) └── ui.tsx # Shared UI components │ lib/ # Helper utilities ├── (api.ts / auth.ts / adminClient.ts ...) # API wrappers, token helpers, etc. │ public/ # Static assets (logos, images) │ .dockerignore .gitignore Dockerfile # Frontend image build eslint.config.mjs # ESLint for TypeScript middleware.ts # Auth middleware next.config.ts # Next.js runtime config package.json # Dependencies & scripts package-lock.json postcss.config.js / .mjs # Tailwind/PostCSS setup tailwind.config.js # Theme config tsconfig.json # TypeScript config README.md # Documentation
+app/
+├── apis/
+│   └── bluegreen.ts                 # REST calls to backend for Blue-Green operations
+│
+├── auth/                            # Authentication & onboarding pages
+│   ├── login/page.tsx               # Login form (JWT authentication)
+│   ├── signup/page.tsx              # Signup for new tenants
+│   ├── pending/page.tsx             # Tenant pending approval
+│   ├── contact/page.tsx             # Contact / support form
+│   ├── docs/page.tsx                # User documentation / help page
+│   └── layout.tsx                   # Layout wrapper for auth pages
+│
+├── dashboard/                       # Main dashboard after login
+│   ├── admin/tenants/page.tsx       # Admin page: approve/reject tenant requests
+│   │
+│   ├── apps/
+│   │   ├── page.tsx                 # Applications table (status / scale / monitor / open)
+│   │   ├── deploy/page.tsx          # Deploy new application
+│   │   └── bluegreen/page.tsx       # Blue-Green deployment interface
+│   │
+│   ├── layout.tsx                   # Dashboard layout (header/footer/navigation)
+│   └── page.tsx                     # Dashboard home page
+│
+├── globals.css                      # Global TailwindCSS styles
+└── layout.tsx                       # Root layout (theme + metadata)
+
+components/
+├── BlueGreenActions.tsx             # Prepare/Promote/Rollback UI buttons
+├── PrepareModal.tsx                 # Modal → Prepare new version
+├── PromoteModal.tsx                 # Modal → Promote preview version
+├── RollbackModal.tsx                # Modal → Rollback to previous version
+├── RequireAuth.tsx                  # Route guard (JWT validation)
+└── ui.tsx                           # Shared UI components
+
+lib/
+├── api.ts                           # Backend API wrapper
+├── auth.ts                          # Auth helpers (token parsing, expiration, etc.)
+└── adminClient.ts                   # Admin-only API helpers
+
+public/                               # Static assets (logos, images)
+
+.dockerignore
+.gitignore
+Dockerfile                            # Docker build for frontend image
+eslint.config.mjs                     # ESLint config for Next.js
+middleware.ts                         # Auth middleware for protected routes
+next.config.ts                        # Next.js runtime configuration
+package.json
+package-lock.json
+postcss.config.js                     # Tailwind/PostCSS setup
+tailwind.config.js                    # Tailwind theme + extensions
+tsconfig.json                         # TypeScript configuration
+README.md                             # Project documentation
 
 ````
 
