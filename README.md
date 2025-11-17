@@ -137,18 +137,7 @@ app/
 
 ```
 
-app/
-├── auth/                    # Login, signup, pending approval
-├── dashboard/
-│   ├── apps/                # Status, monitor, scale, open app
-│   ├── deploy/              # Deploy new apps
-│   ├── bluegreen/           # Prepare / Promote / Rollback
-│   └── admin/tenants/       # Admin approvals
-components/                  # UI components + Blue-Green modals
-apis/                        # API wrappers
-public/                      # Static assets
-middleware.ts                # JWT route protection
-next.config.ts
+bash .github/ └── workflows/ └── ci.yaml # GitHub Actions: Build & Deploy Frontend to Kubernetes app/ ├── apis/ │ └── bluegreen.ts # REST calls to backend for Blue-Green operations │ ├── auth/ # Authentication & onboarding pages │ ├── contact/page.tsx # Contact or support form │ ├── docs/page.tsx # User documentation / guide │ ├── login/page.tsx # Login form with JWT authentication │ ├── pending/page.tsx # Tenant pending approval │ ├── signup/page.tsx # Signup for new tenants │ └── layout.tsx # Layout wrapper for auth pages │ ├── dashboard/ # Main dashboard after login │ ├── admin/tenants/page.tsx # Admin page to approve/reject tenants │ ├── apps/ │ │ ├── bluegreen/page.tsx # Blue-Green deployment UI │ │ ├── deploy/page.tsx # Deploy new app interface │ │ └── page.tsx # Apps table (status, scale, open, Grafana) │ ├── layout.tsx # Dashboard layout (header, sidebar) │ └── page.tsx # Dashboard home │ ├── globals.css # Global TailwindCSS styles └── layout.tsx # Root layout (theme, metadata) │ components/ ├── BlueGreenActions.tsx # Actions (prepare/promote/rollback) ├── PrepareModal.tsx # Modal for preparing new version ├── PromoteModal.tsx # Modal for promoting version ├── RollbackModal.tsx # Modal for rollback ├── RequireAuth.tsx # Route guard (JWT validation) └── ui.tsx # Shared UI components │ lib/ # Helper utilities ├── (api.ts / auth.ts / adminClient.ts ...) # API wrappers, token helpers, etc. │ public/ # Static assets (logos, images) │ .dockerignore .gitignore Dockerfile # Frontend image build eslint.config.mjs # ESLint for TypeScript middleware.ts # Auth middleware next.config.ts # Next.js runtime config package.json # Dependencies & scripts package-lock.json postcss.config.js / .mjs # Tailwind/PostCSS setup tailwind.config.js # Theme config tsconfig.json # TypeScript config README.md # Documentation
 
 ````
 
