@@ -30,9 +30,9 @@ spec:
         - name: POSTGRES_DB
           value: smartdevops
         - name: POSTGRES_USER
-          value: postgres
+          value: raed
         - name: POSTGRES_PASSWORD
-          value: rraaeedd
+          value: raedbari 
         ports:
         - containerPort: 5432
         volumeMounts:
