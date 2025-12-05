@@ -1,9 +1,9 @@
 global:
   resolve_timeout: 10m
   smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'Smart DevOps Alerts <raedbari203@gmail.com>'
-  smtp_auth_username: 'raedbari203@gmail.com'
-  smtp_auth_password: 'plds tltg vvzu kgwr'   # ⚠️ Do NOT share this publicly
+  smtp_from: 'Smart DevOps Alerts <YOUR_EMAIL>'
+  smtp_auth_username: '<YOUR_EMAIL>'
+  smtp_auth_password: ',YOUR_GOOGLE_APP_PASSWORD'   # ⚠️ Do NOT share this publicly
   smtp_require_tls: true
 
 route:
@@ -41,7 +41,7 @@ route:
 receivers:
   - name: 'default-email'
     email_configs:
-      - to: 'raedbari203@gmail.com'
+      - to: '<YOUR_EMAIL>'
         send_resolved: true
         headers:
           subject: '[SmartDevOps] {{ template "email.default.subject" . }}'
