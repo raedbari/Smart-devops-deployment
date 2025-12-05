@@ -73,16 +73,16 @@ spec:
               value: "587"
 
             - name: SMTP_USER
-              value: "raedbari203@gmail.com"
+              value: "<YOUR_EMAIL"
 
             - name: SMTP_PASS
-              value: "plds tltg vvzu kgwr"
+              value: "<YOUR_APP_PASSWORD>"
 
             - name: SMTP_FROM
               value: "Smart DevOps <admin@smartdevops.lat>"
 
             - name: ADMIN_EMAIL
-              value: "raedbari203@gmail.com"
+              value: "<YOUR_EMAIL>"
 
           readinessProbe:
             httpGet:
