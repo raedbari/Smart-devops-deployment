@@ -66,23 +66,10 @@ spec:
               value: "default"
 
             # ✅ SMTP
-            - name: SMTP_HOST
-              value: "smtp.gmail.com"
+          envFrom:
+            - secretRef:
+               name: platform-smtp-secret
 
-            - name: SMTP_PORT
-              value: "587"
-
-            - name: SMTP_USER
-              value: "<YOUR_EMAIL"
-
-            - name: SMTP_PASS
-              value: "<YOUR_APP_PASSWORD>"
-
-            - name: SMTP_FROM
-              value: "Smart DevOps <admin@smartdevops.lat>"
-
-            - name: ADMIN_EMAIL
-              value: "<YOUR_EMAIL>"
 
           readinessProbe:
             httpGet:
