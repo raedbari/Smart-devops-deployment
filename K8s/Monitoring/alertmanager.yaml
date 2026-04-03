@@ -3,7 +3,7 @@ global:
   smtp_smarthost: 'smtp.gmail.com:587'
   smtp_from: 'Smart DevOps Alerts <YOUR_EMAIL>'
   smtp_auth_username: '<YOUR_EMAIL>'
-  smtp_auth_password: ',YOUR_GOOGLE_APP_PASSWORD'   # ⚠️ Do NOT share this publicly
+  smtp_auth_password: ',YOUR_GOOGLE_APP_PASSWORD'   #  Do NOT share this publicly
   smtp_require_tls: true
 
 route:
@@ -14,25 +14,25 @@ route:
   receiver: 'null'
 
   routes:
-    # 🟥 Send only critical alerts to email
+    #  Send only critical alerts to email
     - match:
         severity: 'critical'
       receiver: 'default-email'
       continue: false
 
-    # 🚫 Ignore warning or info level alerts
+    #  Ignore warning or info level alerts
     - match_re:
         severity: 'warning|info'
       receiver: 'null'
       continue: false
 
-    # 🚫 Ignore internal system alerts
+    #  Ignore internal system alerts
     - match_re:
         alertname: 'TargetDown|etcdMembersDown|KubeControllerManagerDown|KubeSchedulerDown|KubeProxyDown|InfoInhibitor'
       receiver: 'null'
       continue: false
 
-    # 🌐 Send all other alerts to the webhook (no email)
+    #  Send all other alerts to the webhook (no email)
     - match_re:
         namespace: .*
       receiver: 'webhook-smartdevops'
