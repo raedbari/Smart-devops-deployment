@@ -1,150 +1,113 @@
 # Billing in Smart DevOps Platform
 
-The Smart DevOps Platform includes a billing-related component that helps connect platform usage and infrastructure visibility with cost awareness in a multi-tenant environment.
+The billing system in **Smart DevOps Platform** adds an administrative and operational layer to the platform by tracking tenant usage and presenting simple cost-related indicators.
 
-The purpose of this part of the platform is not only to deploy and monitor applications, but also to provide a foundation for understanding tenant resource usage and supporting billing-oriented platform logic.
+Its purpose is not to provide a full accounting system, but to offer a practical billing foundation that can be extended later.
 
 ---
 
 ## 1. Billing Purpose
 
-In a multi-tenant platform, different tenants may consume different amounts of resources depending on:
+Because the platform is **multi-tenant**, each tenant may consume resources differently.  
+For this reason, the billing system helps track usage per tenant and connect that usage with simple financial indicators.
 
-- the number of deployed applications
-- CPU and memory usage
-- running workloads
-- namespace activity
-- operational behavior over time
-
-For this reason, the platform includes billing-related functionality to help track usage and support cost visibility.
-
-This makes the platform more practical for shared environments where resource consumption should be observed in a structured way.
+This gives the platform better visibility into:
+- tenant usage
+- operational cost awareness
+- resource consumption in shared environments
 
 ---
 
-## 2. Billing in the Platform Context
+## 2. Main Billing Idea
 
-Billing in Smart DevOps Platform is tied to the platform’s multi-tenant model.
+The current billing model is based on a simplified approach that combines:
 
-Because each tenant operates in its own namespace, the platform can associate tenant activity with an isolated application environment.  
-This makes it easier to observe and organize usage information per tenant.
+- **usage events**
+  - such as opening or accessing an application
 
-The billing-related design is intended to support:
+- **resource usage data**
+  - such as storage consumption collected from the monitoring layer
 
-- tenant-level visibility
-- usage-aware platform management
-- cost-related operational insight
-- future extension toward more advanced billing workflows
+These inputs are used to generate billing-related summaries for each tenant.
 
 ---
 
-## 3. Data Sources for Billing Visibility
+## 3. Main Billing Components
 
-The billing component can rely on platform and infrastructure data such as:
+The billing system includes four main parts:
 
-- namespace-level resource usage
-- application deployment information
-- metrics collected from the monitoring stack
-- database records related to tenants or platform activity
-- platform-specific backend processing
+- **Billing Dashboard**
+  - displays billing indicators in the platform
 
-This allows billing-related information to be connected with real platform behavior instead of being treated as an isolated feature.
+- **Backend Billing Service**
+  - receives requests, validates tenant context, and calculates billing data
 
----
+- **Database**
+  - stores billing events in a dedicated table such as `billing_events`
 
-## 4. Monitoring and Billing Relationship
+- **Monitoring Layer**
+  - provides resource-related data such as storage usage
 
-Billing in the platform is closely related to monitoring and observability.
-
-Prometheus and Grafana help provide visibility into:
-
-- CPU usage
-- memory usage
-- namespace activity
-- application runtime behavior
-
-This information can be used to support billing dashboards or cost-awareness views, especially in a shared Kubernetes environment.
-
-In this design, billing is not separated from operations.  
-Instead, it is informed by the same monitoring data that helps users and administrators understand platform usage.
+Together, these parts allow the platform to record usage and present simple billing information.
 
 ---
 
-## 5. Backend and Data Processing Role
+## 4. Billing Flow
 
-The backend plays an important role in the billing flow.
+The billing workflow can be summarized as follows:
 
-It can be used to:
+1. A user opens or accesses an application through the platform
+2. The frontend sends a billing-related request to the backend
+3. The backend verifies the user and tenant context
+4. The usage event is stored in the database
+5. Resource data is collected from the monitoring layer
+6. Billing indicators are calculated and shown in the Billing Dashboard
 
-- collect or organize tenant-related information
-- process usage-related records
-- connect monitoring data with platform logic
-- prepare data for billing-related views or reporting
-
-This is especially useful when billing information needs to be shown in a structured way inside the platform rather than only as raw infrastructure metrics.
-
----
-
-## 6. Grafana and Billing Visibility
-
-Grafana can be used to display billing-related operational information by presenting data gathered from the monitoring system or other platform data sources.
-
-This may include views related to:
-
-- tenant resource consumption
-- namespace usage trends
-- infrastructure-related cost visibility
-- comparisons between application environments
-
-Using dashboards for billing-related visibility helps make usage information easier to understand for administrators and platform operators.
+This allows billing information to be linked to actual platform activity.
 
 ---
 
-## 7. Multi-Tenant Billing Considerations
+## 5. Billing Dashboard Indicators
 
-Because the platform is multi-tenant, billing should respect tenant boundaries.
+In its current form, the Billing Dashboard displays simple indicators such as:
 
-This means billing-related visibility should be associated with the correct tenant context, such as:
+- **Storage Used (GB)**
+- **Storage Cost ($)**
+- **Requests (Last 24h)**
+- **Requests Cost ($)**
+- **Platform Profit ($)**
 
-- namespace
-- deployed applications
-- resource usage
-- platform activity related to that tenant
-
-This supports clearer separation between tenants and helps avoid mixing resource usage across different environments.
-
----
-
-## 8. Practical Value of Billing Support
-
-Adding billing-related visibility to the platform provides several practical benefits:
-
-- better understanding of tenant resource usage
-- improved cost awareness
-- stronger operational transparency
-- support for platform administration in shared environments
-- a foundation for future billing automation or reporting features
-
-This makes the platform more complete from an operational and administrative perspective.
+These values provide an initial overview of tenant consumption and platform-related cost visibility.
 
 ---
 
-## 9. Future Improvement Potential
+## 6. Functional Goals
 
-The billing component can be extended in the future with features such as:
+The billing system is designed to:
 
-- more detailed tenant usage reports
-- historical billing dashboards
-- usage-based pricing models
-- automated billing summaries
-- stronger integration between monitoring, database records, and cost calculations
+- record tenant usage events
+- link each event to the tenant, user, and application
+- calculate simple cost-related summaries
+- display billing information in a dashboard
+- support administrative visibility across tenants
+- avoid counting the same event more than once
 
-These improvements would make the billing layer more advanced and more useful for real production-oriented platform management.
+---
+
+## 7. Value of the Billing System
+
+The billing system makes the platform more complete by adding a management-oriented layer on top of deployment and monitoring.
+
+It helps:
+- understand tenant usage more clearly
+- improve administrative visibility
+- support future SaaS-style platform growth
+- provide a foundation for more advanced billing features later
 
 ---
 
 ## Conclusion
 
-The billing-related component in Smart DevOps Platform helps connect tenant activity, monitoring data, and operational visibility with cost awareness in a multi-tenant Kubernetes environment.
+The billing system in Smart DevOps Platform is a simplified but important component that links tenant activity, monitoring data, backend processing, and dashboard visibility.
 
-By linking billing concepts with namespaces, resource usage, backend processing, and dashboards, the platform provides a useful foundation for understanding tenant consumption and supporting future billing-oriented features.
+It provides an initial foundation for tracking usage, estimating simple costs, and supporting future expansion toward a more advanced billing model.
