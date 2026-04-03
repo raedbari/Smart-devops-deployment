@@ -1,220 +1,144 @@
-
----
-
 # Tenant Isolation in Smart DevOps Platform
 
-The Smart DevOps Platform is designed as a **multi-tenant environment** where each customer operates inside an isolated Kubernetes namespace.  
-This ensures security, privacy, and resource separation between different clients.
+The Smart DevOps Platform is built as a **multi-tenant Kubernetes-based environment** where each tenant operates inside an isolated workspace.  
+The purpose of this design is to ensure **security, privacy, controlled access, and resource separation** across all tenants using the platform.
 
-This document explains how tenant isolation works across the entire platform.
-
----
-
-## 1. Namespace-Based Tenant Separation
-
-Every tenant is assigned a **dedicated Kubernetes namespace**, created automatically during the approval process.
-
-Example:
-- Tenant “acme”  
-  → Namespace: `acme`
-- Tenant “cr”  
-  → Namespace: `cr`
-
-All workloads, Deployments, Pods, Events, and metrics belonging to a tenant stay inside their namespace and cannot interact with others.
+This document explains how tenant isolation is enforced across the platform architecture.
 
 ---
 
-## 2. Automatic Tenant Routing on Signup
+## 1. Namespace-Based Isolation
 
-Smart DevOps includes smart tenant routing logic:
+Each tenant is assigned a **dedicated Kubernetes namespace**.  
+This namespace acts as the primary boundary for isolating workloads and resources.
 
-- If a company namespace already exists (e.g. `cr`)  
-- And a new user signs up selecting the **same namespace name**  
-- The user is **automatically added to that company’s tenant**  
-- **No admin approval required**
+Examples:
+- Tenant `acme` → namespace `acme`
+- Tenant `cr` → namespace `cr`
 
-This enables companies to onboard internal users instantly.
+Inside each namespace, the tenant’s applications, pods, services, events, and related resources are kept separate from other tenants.
 
-If the namespace **does not exist**, then:
-- Signup enters the **Pending** state  
-- Admin decides: **Approve** or **Reject**
-
----
-
-## 3. Network Isolation (Calico GlobalNetworkPolicy)
-
-Calico GlobalNetworkPolicy enforces strict network isolation:
-
-### 🚫 Tenants cannot access resources of other tenants  
-### 🚫 Tenants cannot scan neighboring namespaces  
-### 🚫 Tenants cannot access internal cluster components  
-
-Example policy:
-
-```yaml
-apiVersion: crd.projectcalico.org/v1
-kind: GlobalNetworkPolicy
-metadata:
-  name: tenant-global-policy
-spec:
-  namespaceSelector: tenant == "true"
-  types:
-    - Ingress
-    - Egress
-
-  ingress:
-  - action: Allow
-    source:
-      namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
-
-  - action: Allow
-    source:
-      namespaceSelector: "tenant == 'true'"
-
-  egress:
-  - action: Allow
-    destination:
-      namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
-
-  - action: Allow
-    destination:
-      namespaceSelector: "kubernetes.io/metadata.name == 'kube-system'"
-      selector: "k8s-app == 'kube-dns'"
-
-  - action: Deny
-````
-
-### Result:
-
-* Tenants can reach only:
-
-  * Their own namespace
-  * Ingress controller
-  * DNS
-* **Nothing else**
+This ensures that:
+- workloads are logically separated
+- resource names do not conflict across tenants
+- operational visibility can be scoped safely per tenant
 
 ---
 
-## 4. RBAC Isolation for the Platform API
+## 2. Tenant Provisioning and Assignment
 
-The backend (`platform-api`) must inspect Kubernetes deployments to show app status, events, pods, logs —
-BUT it must **never** modify workloads.
+Tenant isolation begins during the onboarding and approval workflow.
 
-This is enforced through a **read-only ClusterRole**:
+When a new tenant is approved, the platform prepares an isolated tenant environment, including:
+- a dedicated namespace
+- the required access configuration
+- routing and monitoring context
+- security controls related to that tenant
 
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: platform-api-readonly
-rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
-
-  - apiGroups: [""]
-    resources: ["pods", "namespaces"]
-    verbs: ["get", "list", "watch"]
-
-  - apiGroups: ["events.k8s.io"]
-    resources: ["events"]
-    verbs: ["get", "list", "watch"]
-```
-
-Bound to service account:
-
-```yaml
-kind: ClusterRoleBinding
-...
-subjects:
-  - kind: ServiceAccount
-    name: platform-api
-    namespace: default
-```
-
-### Result:
-
-* Backend can **see** tenant resources
-* Backend **cannot modify** anything in the cluster
+This controlled provisioning process ensures that tenant environments are created in a consistent and secure way.
 
 ---
 
-## 5. Ingress-Level Isolation
+## 3. Network Isolation
 
-Ingress rules ensure:
+The platform enforces network-level separation using **Calico policies** to restrict communication across namespaces.
 
-* A tenant can only access **its own** app URLs
-* No cross-tenant API endpoint exposure
-* Hosted apps remain isolated
+This prevents:
+- cross-tenant communication
+- unauthorized access to neighboring namespaces
+- direct access to sensitive internal cluster components
 
-Example URL patterns:
+Only the required traffic is allowed, such as:
+- ingress traffic through the ingress controller
+- DNS access for service discovery
+- traffic that is explicitly allowed by policy
 
-```
-/apps/acme/*
-/apps/cr/*
-```
-
-A tenant cannot access:
-
-```
-/apps/other-tenant/*
-```
+As a result, each tenant is limited to its own permitted communication paths.
 
 ---
 
-## 6. Monitoring Isolation (Prometheus/Grafana)
+## 4. RBAC and Platform API Access
 
-Monitoring respects tenant boundaries:
+The backend platform API needs visibility into tenant resources in order to display:
+- application status
+- pod information
+- events
+- deployment health
 
-* Every metric query is filtered by **namespace**
-* Every log query is filtered by **namespace**
-* Grafana URLs include:
+However, this access must remain controlled.
 
-  ```
-  var-namespace=<tenant>
-  var-app=<app>
-  ```
-* Two monitoring modes:
+For this reason, Kubernetes RBAC is used to grant the backend only the permissions required for platform functionality.  
+Sensitive operations are restricted, and access is managed through service accounts and role bindings.
 
-  * **Client Dashboard** → simple & safe
-  * **DevOps Dashboard** → full advanced charts
-
-Tenants cannot see logs or metrics of any other namespace.
+This ensures that cluster access is controlled and aligned with the platform’s security model.
 
 ---
 
-## 7. Container Security Controls
+## 5. Routing and Access Isolation
 
-To prevent privilege escalation inside workloads:
+Ingress and platform routing are designed so that tenants can access only their own application paths and services.
 
-### ❌ Tenants cannot deploy containers running on privileged ports (<1024)
+This helps ensure:
+- tenant-specific application access
+- no accidental exposure of other tenant routes
+- cleaner separation at the platform entry layer
 
-If a customer enters port `80` or `443`:
-
-* The platform automatically rewrites the port to `8080`
-* This ensures apps run as **non-root**
-* Protects cluster security
-
-Example:
-
-* User submits → `image: nginx:1.0` on port `80`
-* Platform deploys → port `8080`
+The routing layer works together with namespaces and policies to keep application access isolated.
 
 ---
 
-## 8. Summary of Tenant Isolation Features
+## 6. Monitoring Isolation
 
-| Layer           | Protection Provided                             |
-| --------------- | ----------------------------------------------- |
-| Namespace       | Hard separation per tenant                      |
-| Calico Network  | No cross-tenant traffic allowed                 |
-| RBAC            | Read-only API — backend cannot modify workloads |
-| Ingress         | Per-tenant routing only                         |
-| Monitoring      | Namespaced metrics/logs only                    |
-| Container Ports | Prevent privileged containers                   |
-| Signup Logic    | Auto-company-join if namespace exists           |
+Monitoring is also scoped per tenant.
 
-Smart DevOps Platform provides **full multi-tenant isolation** across network, compute, RBAC, monitoring, and routing layers — making it secure, scalable, and enterprise-ready.
+Prometheus and Grafana are used in a way that respects namespace boundaries by filtering tenant views using namespace and application context.
 
-```
- 
+This allows:
+- tenant-specific dashboards
+- tenant-specific metrics visibility
+- safer operational views for clients
+- more advanced internal monitoring for DevOps administrators
+
+As a result, one tenant cannot view another tenant’s monitoring data.
+
+---
+
+## 7. Runtime Security Controls
+
+The platform also applies runtime-oriented controls that support safe tenant execution.
+
+For example:
+- application deployment is constrained through platform rules
+- unsafe or privileged runtime behavior is reduced
+- port handling can be adjusted to align with safer non-root container execution
+
+These controls help protect the cluster while still providing a simple deployment experience for tenants.
+
+---
+
+## 8. Isolation Layers Summary
+
+| Layer | Role in Isolation |
+|-------|-------------------|
+| Namespace | Primary boundary for tenant resources |
+| Network Policy | Prevents unauthorized cross-tenant traffic |
+| RBAC | Controls how platform components access cluster resources |
+| Routing / Ingress | Restricts tenant access to their own application paths |
+| Monitoring | Limits metrics and dashboards to tenant scope |
+| Runtime Controls | Reduces unsafe workload behavior |
+
+---
+
+## Conclusion
+
+Tenant isolation in Smart DevOps Platform is not implemented through a single mechanism, but through multiple coordinated layers.
+
+By combining:
+- namespace-based separation
+- network isolation
+- controlled RBAC
+- isolated routing
+- monitoring boundaries
+- runtime safety controls
+
+the platform provides a secure and scalable multi-tenant environment suitable for shared Kubernetes-based application management.
