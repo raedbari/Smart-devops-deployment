@@ -1,119 +1,186 @@
-# Blue-Green Deployment — Smart DevOps Platform
+# Blue-Green Deployment in Smart DevOps Platform
 
-Blue-Green Deployment in **Smart DevOps Platform** allows users to upgrade an existing application with zero downtime by running two versions side-by-side:  
-- **Active** → Current stable version  
-- **Preview** → Upcoming version prepared for testing  
+The Smart DevOps Platform supports **Blue-Green Deployment** as a safer release strategy for updating applications with minimal disruption.
 
-This mechanism ensures safe upgrades, instant rollback, and uninterrupted availability.
+Instead of replacing the currently running version directly, the platform prepares a second version of the application alongside the existing one. This allows validation before switching traffic and enables fast rollback if problems appear.
 
----
+Within the platform, the two versions are represented as:
 
-## 1. Real Example: Upgrading `nginx:1.0` → `nginx:2.0`
+- **Active version** → the currently serving production traffic
+- **Preview version** → the new candidate version prepared for testing
 
-Assume the user already deployed:
-
-- **App Name:** `nginx`  
-- **Image:** `nginx`  
-- **Tag:** `1.0`
-
-Now the user wants to upgrade the application to version `2.0`.
+This approach improves deployment safety, reduces downtime risk, and gives users more control over application upgrades.
 
 ---
 
-# 2. Prepare Phase (Create Preview Version)
+## 1. Why Blue-Green Deployment Was Used
 
-The **Prepare** step creates a new *preview* version of the application while keeping the current version running.
+Traditional in-place updates may cause service interruption or make rollback more difficult if the new version fails after deployment.
 
-### During Prepare:
+To reduce this risk, Smart DevOps Platform uses Blue-Green Deployment because it allows:
 
-- The existing version (`nginx:1.0`) stays active and receives traffic.
-- A new Deployment is created:
-  - **Active:** `nginx`
-  - **Preview:** `nginx-preview`
-- User fills the Prepare form with:
-  - **Name:** `nginx`
-  - **Image:** `nginx`
-  - **Tag:** `2.0`
-  - Port, replicas, health path…
+- running the old and new versions side by side
+- validating the new version before full activation
+- switching traffic in a controlled way
+- restoring the previous version quickly if needed
+- minimizing service disruption during updates
 
-### Result After Prepare:
-
-| Version              | Status     | Traffic |
-|----------------------|------------|---------|
-| `nginx:1.0`          | Active     | ✔ Yes |
-| `nginx:2.0-preview`  | Preview    | ✖ No  |
-
-This allows safe testing of the new version.
+This makes it especially useful in a platform that aims to simplify deployment while still following safer DevOps practices.
 
 ---
 
-# 3. Promote Phase (Switch to New Version)
+## 2. Deployment Model in the Platform
 
-**Promote** switches production traffic from the old version to the new preview version.
+Instead of using the literal names "blue" and "green", the platform uses:
 
-### During Promote:
+- `app` for the current active deployment
+- `app-preview` for the prepared next version
 
-1. `nginx-preview`:
-   - Role changes → `active`
-   - Replicas set → `1`
+For example, if the application name is `nginx`, the platform may manage:
 
-2. Old Deployment `nginx`:
-   - Role changes → `idle`
-   - Replicas set → `0` (stopped)
+- `nginx` → active deployment
+- `nginx-preview` → preview deployment
 
-### Result After Promote:
-
-| Version     | Status     | Traffic |
-|-------------|------------|---------|
-| `nginx:2.0` | Active     | ✔ Yes |
-| `nginx:1.0` | Idle       | ✖ No  |
+The active version continues serving users, while the preview version is prepared separately for validation and controlled promotion.
 
 ---
 
-# 4. Rollback Phase (Restore Previous Version)
+## 3. Main Blue-Green Actions
 
-If the new version fails or behaves incorrectly, rollback is instant.
+The platform provides three main actions:
 
-### During Rollback:
+### Prepare
+Creates a preview version of the application while the current version remains active.
 
-- `nginx` (idle old version) becomes active:
-  - Role → `active`
-  - Replicas → `1`
+### Promote
+Switches production traffic from the current active version to the preview version.
 
-- `nginx-preview` (current active) becomes idle:
-  - Role → `idle`
-  - Replicas → `0`
+### Rollback
+Reactivates the previous stable version if the promoted version fails or behaves incorrectly.
 
-### Result After Rollback:
-
-| Version     | Status     | Traffic |
-|-------------|------------|---------|
-| `nginx:1.0` | Active     | ✔ Yes |
-| `nginx:2.0` | Idle       | ✖ No  |
-
-Rollback is instant and restores the previous version with zero downtime.
+These actions are exposed through the platform workflow instead of requiring the user to manually manage Kubernetes update logic.
 
 ---
 
-# 5. Additional Notes
+## 4. Prepare Phase
 
-- Instead of “blue” and “green”, the platform uses:
-  - Active Deployment → `app`
-  - Preview Deployment → `app-preview`
+The **Prepare** phase creates a new preview deployment without interrupting the running application.
 
-- Only three actions exist:
-  - **Prepare** → Create a preview version
-  - **Promote** → Activate the preview version and shut down the old one
-  - **Rollback** → Reactivate the previous version
+During this step:
 
-- The system automatically manages:
-  - Labels  
-  - Selectors  
-  - Replicas scaling  
-  - Activation/deactivation  
+- the currently active deployment remains available
+- a new preview deployment is created using the updated image or version
+- traffic continues to go to the active version
+- the preview version can be inspected or validated before release
 
-ensuring a safe and reliable deployment process.
+### Example
+
+Assume the currently active application is:
+
+- App name: `nginx`
+- Image: `nginx`
+- Tag: `1.0`
+
+The user wants to prepare version `2.0`.
+
+The platform creates:
+
+- `nginx` → active version
+- `nginx-preview` → preview version using `nginx:2.0`
+
+### Result After Prepare
+
+| Deployment | Version | Role | Receives Production Traffic |
+|------------|---------|------|-----------------------------|
+| `nginx` | `1.0` | Active | Yes |
+| `nginx-preview` | `2.0` | Preview | No |
+
+This phase allows the new version to exist safely beside the current one.
 
 ---
 
-This file is ready to upload to GitHub as **`blue-green.md`** or **`README.md`**.
+## 5. Promote Phase
+
+The **Promote** phase activates the preview version and makes it the new production version.
+
+During promotion, the platform updates the deployment state so that the preview version becomes the active one. At the same time, the previously active version is deactivated or scaled down.
+
+The exact mechanism may involve:
+- updating labels
+- updating selectors
+- adjusting replicas
+- changing which deployment is considered active by the service logic
+
+### Result After Promote
+
+| Deployment | Version | Role | Receives Production Traffic |
+|------------|---------|------|-----------------------------|
+| `nginx-preview` | `2.0` | Active | Yes |
+| `nginx` | `1.0` | Idle / Previous | No |
+
+After promotion, the new version becomes the live production version.
+
+---
+
+## 6. Rollback Phase
+
+If the promoted version fails, rollback can restore the previous version quickly.
+
+During rollback:
+
+- the previously stable version is reactivated
+- the newer version is removed from active traffic
+- application availability is preserved through controlled switching
+
+### Result After Rollback
+
+| Deployment | Version | Role | Receives Production Traffic |
+|------------|---------|------|-----------------------------|
+| `nginx` | `1.0` | Active | Yes |
+| `nginx-preview` | `2.0` | Idle / Previous | No |
+
+This makes rollback much safer and faster than rebuilding the old version from scratch.
+
+---
+
+## 7. How Traffic Switching Works
+
+Traffic switching in Smart DevOps Platform is controlled through Kubernetes resource logic managed by the platform.
+
+Rather than deleting the old deployment immediately, the platform keeps both versions logically separated and controls which one is active.
+
+This can include:
+- role-based labels such as `active`, `preview`, or `idle`
+- service selection rules
+- scaling behavior to keep only the intended version live
+- controlled activation and deactivation during promote and rollback
+
+Because traffic switching is managed by the platform, users do not need to manually edit low-level Kubernetes resources.
+
+---
+
+## 8. Benefits of the Platform Approach
+
+The Blue-Green implementation in Smart DevOps Platform provides several benefits:
+
+- safer upgrades
+- lower risk of downtime
+- controlled traffic switching
+- easier rollback
+- clearer release lifecycle
+- better user experience for non-expert Kubernetes users
+
+This is important because one of the platform’s goals is to hide operational complexity while still applying sound DevOps deployment practices.
+
+---
+
+## 9. Summary
+
+Blue-Green Deployment in Smart DevOps Platform is implemented as a controlled application upgrade workflow based on two deployment states:
+
+- an **active** production version
+- a **preview** candidate version
+
+Using the actions **Prepare**, **Promote**, and **Rollback**, the platform allows users to release updates more safely and recover quickly if something goes wrong.
+
+This makes the platform more reliable, more user-friendly, and better suited for production-oriented Kubernetes application management.
