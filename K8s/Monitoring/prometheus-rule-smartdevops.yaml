@@ -10,37 +10,37 @@ spec:
     - name: smartdevops-alerts
       rules:
 
-        # 🔴 Pod Failed
+        #  Pod Failed
         - alert: PodDown
           expr: kube_pod_status_phase{phase="Failed"} > 0
           for: 2m
           labels:
             severity: critical
           annotations:
-            summary: "❌ A Pod has crashed"
+            summary: " A Pod has crashed"
             description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is in a Failed state for more than 2 minutes."
 
-        # 🟡 Pod Pending Too Long
+        #  Pod Pending Too Long
         - alert: PodPendingTooLong
           expr: kube_pod_status_phase{phase="Pending"} > 0
           for: 5m
           labels:
             severity: warning
           annotations:
-            summary: "⚠️ Pod stuck in Pending"
+            summary: " Pod stuck in Pending"
             description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been Pending for more than 5 minutes."
 
-        # 🔥 High CPU Usage (by namespace)
+        #  High CPU Usage (by namespace)
         - alert: HighCPUUsage
           expr: sum(rate(container_cpu_usage_seconds_total{container!=\"\", namespace!=\"\"}[5m])) by (namespace) > 0.8
           for: 3m
           labels:
             severity: warning
           annotations:
-            summary: "🔥 High CPU usage detected"
+            summary: " High CPU usage detected"
             description: "Namespace {{ $labels.namespace }} is using more than 80% CPU for over 3 minutes."
 
-        # 💥 High Memory Usage (namespace memory vs limits)
+        #  High Memory Usage (namespace memory vs limits)
         - alert: HighMemoryUsage
           expr: |
             sum(container_memory_usage_bytes{container!=""}) by (namespace)
@@ -51,5 +51,5 @@ spec:
           labels:
             severity: warning
           annotations:
-            summary: "💥 High memory usage detected"
+            summary: " High memory usage detected"
             description: "Namespace {{ $labels.namespace }} is using more than 90% of its memory limit."
