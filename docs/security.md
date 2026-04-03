@@ -1,175 +1,192 @@
-# 🔐 Smart DevOps Platform — Security Overview
+# Security in Smart DevOps Platform
 
-This document explains how security is implemented inside the Smart DevOps Platform.  
-The goal is to provide **tenant isolation**, **safe application deployment**, and **protected system access** with minimal complexity.
+This document explains the main security mechanisms used in the **Smart DevOps Platform**.
 
----
+The platform is designed to provide:
+- controlled user access
+- tenant isolation
+- safer application deployment
+- protected communication
+- secure handling of sensitive configuration
 
-## 1. Role-Based Access Control (RBAC)
-
-The platform uses Kubernetes RBAC + custom application roles to control access.
-
-### 📌 Platform Roles
-- **Client**  
-  - Can deploy apps  
-  - Can view metrics/logs  
-  - Cannot restart, delete, or modify applications  
-  - Cannot access other namespaces
-
-- **DevOps**  
-  - Same as client, but with **advanced monitoring dashboards**
-
-- **Admin**  
-  - Approves/rejects user sign-ups  
-  - Manages tenants  
-  - Manages namespaces  
-  - Controls platform-wide configuration
-
-### 📌 Backend Restrictions
-The backend service account is **read-only** in the cluster:
-- Cannot delete pods
-- Cannot modify deployments
-- Cannot access other namespaces except the tenant namespace
-
-This ensures *no accidental or malicious damage* can occur.
+Because the platform is built as a multi-tenant Kubernetes-based environment, security is implemented through multiple layers rather than a single control point.
 
 ---
 
-## 2. TLS / HTTPS Security
+## 1. Access Control
 
-All traffic to the platform is encrypted using **TLS certificates** via the NGINX Ingress Controller.
+The platform uses a combination of **application-level roles** and **Kubernetes RBAC** to control access.
 
-- All URLs use `https://`
-- Certificates managed by **cert-manager** + **Let’s Encrypt**
-- Prevents MITM attacks and credential leaks
+### Platform Roles
 
----
+The platform defines different levels of user access, such as:
 
-## 3. Secrets Management
+- **Client**
+  - can deploy applications
+  - can view basic monitoring information
+  - cannot perform administrative platform actions
 
-The platform uses Kubernetes **Secrets** to store sensitive data:
+- **DevOps**
+  - has broader monitoring and operational visibility
+  - can access more advanced dashboards and operational views
 
-- JWT secret  
-- Database credentials  
-- SMTP credentials  
-- Grafana tokens  
+- **Admin**
+  - reviews and approves user requests
+  - manages tenants and namespaces
+  - controls platform-level configuration and access decisions
 
-### 🚫 Not Allowed
-- No secrets stored in GitHub  
-- No secrets stored in config files  
-- No secrets stored in frontend code  
-
-Secrets are injected into pods using environment variables.
+This role separation helps limit access based on operational responsibility.
 
 ---
 
-## 4. Tenant Isolation (Namespaces)
+## 2. Backend Access Restrictions
 
-Each tenant gets **its own isolated Kubernetes namespace**.
+The backend interacts with Kubernetes to retrieve deployment and status information required by the platform.
 
-### What is isolated?
+To reduce risk, backend cluster access should remain limited to the permissions required for platform functionality.  
+This helps ensure that backend services can inspect relevant resources without having unrestricted control over the cluster.
 
-| Resource | Isolated? |
-|----------|-----------|
-| Deployments | ✅ |
-| Pods | ✅ |
-| Services | ✅ |
-| Network | ✅ |
-| Monitoring Views | ✅ |
-| Logs | ✅ |
-
-This ensures tenants cannot:
-
-- See other tenants’ applications  
-- Access other namespaces  
-- Read others' logs  
-- Interfere with other workloads  
+Such restrictions are especially important in shared environments where excessive permissions would increase security risk.
 
 ---
 
-## 5. Network Isolation (Calico Policies)
+## 3. TLS and Secure Communication
 
-Calico GlobalNetworkPolicies enforce strict isolation:
+Traffic to the platform is protected using **TLS/HTTPS**.
 
-- Tenants **cannot** talk to each other  
-- Tenants **can only** talk to:
-  - Ingress controller  
-  - DNS service  
-- All cross-tenant communication is blocked by default  
+This is typically implemented through:
+- **NGINX Ingress Controller**
+- **cert-manager**
+- certificate issuers such as **Let’s Encrypt**
 
-This prevents:
-- Data leaks  
-- Unauthorized internal traffic  
-- Namespace hopping  
+Using HTTPS helps protect:
+- login credentials
+- session-related communication
+- application access traffic
+- administrative interactions with the platform
 
----
-
-## 6. Safe Application Deployment (Port Rewrite)
-
-To prevent privilege escalation:
-
-- If a user deploys an app with port `< 1024`  
-  → The platform **automatically rewrites it to `8080`**
-
-Why?
-
-Ports < 1024 require root privileges.  
-The platform enforces **non-root containers** only.
-
-This prevents:
-- Running containers as root  
-- Privileged mode abuse  
-- Host escape vectors  
+Encrypted communication reduces the risk of interception and improves overall platform security.
 
 ---
 
-## 7. Signup Approval Security
+## 4. Secrets Management
 
-When a user signs up:
+Sensitive platform values should not be stored directly in public source files or exposed in frontend code.
 
-1. They enter **Pending** state  
-2. No namespace is created  
-3. No resources are created  
-4. They cannot access the platform  
+The platform uses **Kubernetes Secrets** to manage sensitive information such as:
 
-Only after admin approval:
-- Namespace is created  
-- RoleBindings applied  
-- Network policies attached  
+- JWT secrets
+- database credentials
+- SMTP credentials
+- monitoring-related tokens
+- other internal service secrets
 
-### Special Case  
-If a user signs up with a namespace name matching an existing company:
+These secrets are typically injected into workloads through environment variables or Kubernetes secret references.
 
-Example:  
-If company **cr** already exists → any user selecting **cr** joins automatically (no approval).
+This approach helps separate sensitive runtime configuration from application source code.
 
 ---
 
-## 8. Monitoring Access Control
+## 5. Tenant Isolation
 
-The monitoring stack (Prometheus + Grafana) is also isolated:
+A core security property of the platform is tenant separation.
 
-- Client role → simple dashboard  
-- DevOps role → advanced dashboard  
-- Each dashboard is filtered by `namespace=tenant_name`  
-- Users only see metrics of **their own** apps
+Each tenant is assigned its own Kubernetes namespace, which acts as the main isolation boundary for tenant resources.
 
-Logs (Loki) follow the same rule.
+This helps isolate:
+- deployments
+- pods
+- services
+- monitoring context
+- logs
+- namespace-level operations
+
+As a result, tenants are prevented from interacting directly with each other’s environments under normal platform operation.
+
+Tenant isolation is described in more detail in the dedicated `tenant-isolation.md` document.
 
 ---
 
-## ✔ Summary
+## 6. Network Isolation
 
-The platform implements multiple layers of protection:
+The platform uses network-level controls, such as **Calico policies**, to reduce unwanted communication between tenants.
 
-- RBAC controls permissions  
-- TLS protects communication  
-- Secrets stored securely  
-- Tenants isolated via namespaces  
-- Calico network policies prevent cross-access  
-- No-root deployments enforced  
-- Admin approval required  
-- Monitoring is namespace-restricted  
+These controls are intended to:
+- block cross-tenant traffic
+- restrict access to unnecessary internal services
+- allow only required communication paths such as ingress and DNS-related access
 
-This security model ensures a **safe**, **multi-tenant**, and **production-ready** DevOps platform.
+Network isolation is an important second layer after namespace separation, because namespace boundaries alone are not sufficient for full traffic control.
 
+---
+
+## 7. Safer Application Deployment
+
+The platform includes deployment rules that help reduce risky workload behavior.
+
+For example, if a user attempts to deploy an application using a privileged port below `1024`, the platform may rewrite the port to a safer non-privileged port such as `8080`.
+
+This supports safer runtime behavior and helps reduce cases where containers would require elevated privileges.
+
+The goal is to keep deployment simple for users while still applying safer defaults.
+
+---
+
+## 8. Controlled Onboarding and Approval
+
+User access to the platform is not immediately granted after signup.
+
+Instead, the onboarding process includes a controlled approval step:
+
+1. the user signs up
+2. the account remains in a pending state
+3. access is not fully enabled until approval is granted
+4. after approval, the required tenant environment and access configuration can be prepared
+
+This reduces the risk of uncontrolled access and allows administrators to review who is allowed to use the platform.
+
+More detailed onboarding logic can be documented separately in `authentication.md` or `platform-workflow.md`.
+
+---
+
+## 9. Monitoring Access Boundaries
+
+Monitoring access is also treated as a security concern.
+
+The platform separates monitoring visibility using:
+- role-based dashboard access
+- namespace-level filtering
+- tenant-specific monitoring context
+
+This helps ensure that:
+- clients see only their own application data
+- DevOps users can access broader operational visibility where permitted
+- monitoring does not break tenant boundaries
+
+The same principle applies to logs and other observability data where supported.
+
+---
+
+## 10. Multi-Layer Security Model
+
+Security in Smart DevOps Platform is not based on a single mechanism.  
+It is built through multiple layers working together, including:
+
+- access control through roles and RBAC
+- protected communication with TLS
+- secure secret handling
+- namespace-based tenant isolation
+- network isolation policies
+- safer deployment constraints
+- controlled user onboarding
+- filtered monitoring access
+
+This layered model improves security while still keeping the platform usable for end users.
+
+---
+
+## Conclusion
+
+The Smart DevOps Platform applies security through a combination of access control, secure communication, tenant isolation, deployment restrictions, and controlled operational visibility.
+
+By combining these layers, the platform provides a more secure and manageable environment for multi-tenant Kubernetes-based application deployment and monitoring.
