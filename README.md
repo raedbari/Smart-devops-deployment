@@ -1,343 +1,196 @@
+# Smart DevOps Platform
 
+A multi-tenant DevOps platform built to simplify Kubernetes-based application deployment and management for end users while still providing powerful operational capabilities for administrators and DevOps engineers.
 
-
-# 🚀 SmartDevOps Platform
-
-A smart and modern platform for deploying and managing **multi-tenant applications** on **Kubernetes**,  
-built with **FastAPI**, **Next.js**, and fully integrated **Prometheus · Grafana · Alertmanager** monitoring.
-
-The platform combines **simplicity for clients** and **professional features for DevOps engineers**,  
-with strong security, full tenant isolation, and zero-downtime deployments.
+The platform hides much of Kubernetes complexity behind a user-friendly interface and integrates deployment automation, monitoring, alerting, tenant isolation, authentication, and blue-green deployment workflows into one system.
 
 ---
 
-## 🧠 Overview
+## Overview
 
-**SmartDevOps** automates the entire application lifecycle inside Kubernetes:
+Smart DevOps Platform was designed to make cloud-native application deployment easier, safer, and more accessible. Instead of requiring users to manually interact with Kubernetes resources, the platform provides a centralized interface for onboarding tenants, deploying applications, monitoring their health, and managing releases.
 
-- Secure tenant onboarding  
-- App deployment (single click)  
-- Full monitoring (CPU, memory, logs, events)  
-- Blue-Green deployment flow  
-- Instant alerts on failures  
-- Strict namespace isolation for each tenant  
+The project combines:
 
-The system is designed to provide a frictionless experience for beginners  
-while giving DevOps users powerful observability and deployment tools.
-
----
+- application deployment through a simplified interface
+- multi-tenant isolation using Kubernetes namespaces and RBAC
+- secure authentication and approval-based onboarding
+- blue-green deployment for safer releases
+- monitoring and observability through Prometheus and Grafana
+- alerting through Alertmanager with webhook and email integration
+- billing-related observability and usage tracking support
 
 ---
 
-# 📚 Table of Contents
+## Problem Statement
 
-- [🧠 Overview](#-overview)
-- [💡 Problem & Solution](#-problem--solution)
-- [🏗️ Architecture](#️-architecture)
-- [⚙️ Technologies](#️-technologies)
-- [📸 Screenshots](#-screenshots)
-- [📂 Project Structure](#-project-structure)
-  - [Backend (FastAPI)](#backend-fastapi)
-  - [Frontend (Nextjs)](#frontend-nextjs)
-- [🔵 Blue-Green Deployment](#-blue-green-deployment)
-- [📊 Monitoring & Alerting](#-monitoring--alerting)
-- [🛡 Tenant Isolation](#-tenant-isolation)
-- [🔐 Security](#-security)
-- [🚀 CI/CD Pipeline](#-cicd-pipeline)
-- [👤 About the Developer](#-about-the-developer)
+Managing Kubernetes applications directly can be difficult, especially for users who are not deeply familiar with infrastructure and container orchestration. Common problems include:
+
+- deployment complexity
+- unsafe updates that may cause downtime
+- poor visibility into application health
+- limited tenant separation in shared environments
+- lack of centralized alerting
+- operational overhead for administrators
+- difficulty connecting technical infrastructure data to platform-level usage and billing workflows
+
+This project addresses these issues by providing a smart platform that abstracts low-level complexity and offers a more guided and secure operational experience.
 
 ---
 
-## 💡 Problem & Solution
+## Proposed Solution
 
-| Problem | SmartDevOps Solution |
-|--------|------------------------|
-| Slow & unsafe deployments | Blue-Green deployment → zero downtime |
-| Rollback complexity | One-click **Rollback** |
-| Hard to know when app fails | Alertmanager → instant email alerts |
-| No monitoring visibility | Dedicated Grafana dashboards |
-| Multi-tenant shared resources | Namespace + RBAC + NetworkPolicy isolation |
-| Clients use protected ports <1024 | Auto-rewrite to **8080** (avoid root requirements) |
-| Open sign-up is unsafe | Admin approval before activating any tenant |
-| Companies need grouped users | Automatic match: if tenant enters namespace name of company → joins it |
+The Smart DevOps Platform provides a web-based system where users can:
 
----
+- sign up and request access to the platform
+- wait for administrator approval before activation
+- deploy and manage their applications without directly writing Kubernetes manifests
+- view application status and health information
+- use monitoring dashboards for runtime visibility
+- receive or trigger alert workflows when failures occur
+- perform safer upgrades using blue-green deployment
 
-## 🏗️ Architecture
+At the same time, administrators can:
 
-📘 Full architecture diagram:  
-`/docs/architecture.drawio`
-
-Open using **draw.io** or **diagrams.net**.
-
-Contains flows for:
-
-- User signup  
-- Tenant approval  
-- Login  
-- Deploy App  
-- App Status  
-- Monitoring  
-- Alertmanager webhook  
-- Blue-Green deployment  
-- Namespace RBAC & isolation  
+- review and approve tenant requests
+- enforce namespace-based isolation
+- control access using RBAC
+- observe platform-level activity
+- support billing and operational tracking workflows
 
 ---
 
-## ⚙️ Technologies
+## Key Features
 
-| Layer | Stack |
-|-------|--------|
-| **Frontend** | Next.js, TypeScript, TailwindCSS, Framer Motion |
-| **Backend** | FastAPI, SQLAlchemy, PostgreSQL |
-| **K8s Layer** | Deployments, Services, Ingress-NGINX |
-| **Monitoring** | Prometheus, Grafana, Loki, Alertmanager |
-| **Security** | JWT Auth, RBAC, Calico NetworkPolicies, Secrets |
-| **CI/CD** | GitHub Actions (auto build, push, deploy) |
-| **Deployment Strategy** | Blue-Green Deployment |
+- **Multi-tenant architecture**
+  - each tenant is isolated inside a dedicated Kubernetes namespace
 
----
+- **Authentication and approval workflow**
+  - users sign up, remain in a pending state, and are activated only after administrator approval
 
-## 📸 Screenshots
+- **Application deployment**
+  - users deploy applications through the platform instead of manually managing Kubernetes resources
 
-### 🔹 App Status Page
-![App Status](./Screenshots/AppStatus.png)
+- **Blue-Green deployment**
+  - safer release strategy with prepare, promote, and rollback workflow
 
-### 🔹 Blue-Green Deployment Panel
-![Blue-Green](./Screenshots/Blue-Green.png)
+- **Monitoring**
+  - Prometheus and Grafana integration for application and infrastructure visibility
 
-### 🔹 Deploy New App
-![Deploy](./Screenshots/Deploy.png)
+- **Alerting**
+  - Alertmanager integration with email and webhook-based notification flow
 
----
+- **Security and tenant isolation**
+  - namespace isolation, RBAC, resource control, and network policies
 
-## 📂 Project Structure
+- **Billing-related observability**
+  - usage and monitoring data can support billing visibility and cost-related platform insights
 
-### 🧩 Backend (FastAPI)
-
-```
-
-app/
-├── auth.py                  # JWT login
-├── onboarding.py            # Tenant NS + RBAC + Quota setup
-├── k8s_ops.py               # Deploy, scale, service, blue-green logic
-├── monitor.py               # Metrics, logs, Grafana URL generator
-├── alerts/webhook.py        # Alertmanager → backend handler
-├── models.py                # SQLAlchemy models
-├── db.py                    # DB engine + SessionLocal
-├── config.py                # Environment variables
-├── k8s_client.py            # Kubernetes client init
-└── main.py                  # FastAPI entry
-
-```
+- **Beginner-friendly experience**
+  - Kubernetes complexity is hidden behind a simpler interface and guided workflow
 
 ---
 
-### 💻 Frontend (Next.js)
+## System Workflow
 
-```
-.github/
-└── workflows/
-    └── ci.yaml                      # GitHub Actions: Build & Deploy Frontend to Kubernetes
+The platform workflow can be summarized as follows:
 
-app/
-├── apis/
-│   └── bluegreen.ts                 # REST calls to backend for Blue-Green operations
-│
-├── auth/                            # Authentication & onboarding pages
-│   ├── login/page.tsx               # Login form (JWT authentication)
-│   ├── signup/page.tsx              # Signup for new tenants
-│   ├── pending/page.tsx             # Tenant pending approval
-│   ├── contact/page.tsx             # Contact / support form
-│   ├── docs/page.tsx                # User documentation / help page
-│   └── layout.tsx                   # Layout wrapper for auth pages
-│
-├── dashboard/                       # Main dashboard after login
-│   ├── admin/tenants/page.tsx       # Admin page: approve/reject tenant requests
-│   │
-│   ├── apps/
-│   │   ├── page.tsx                 # Applications table (status / scale / monitor / open)
-│   │   ├── deploy/page.tsx          # Deploy new application
-│   │   └── bluegreen/page.tsx       # Blue-Green deployment interface
-│   │
-│   ├── layout.tsx                   # Dashboard layout (header/footer/navigation)
-│   └── page.tsx                     # Dashboard home page
-│
-├── globals.css                      # Global TailwindCSS styles
-└── layout.tsx                       # Root layout (theme + metadata)
-
-components/
-├── BlueGreenActions.tsx             # Prepare/Promote/Rollback UI buttons
-├── PrepareModal.tsx                 # Modal → Prepare new version
-├── PromoteModal.tsx                 # Modal → Promote preview version
-├── RollbackModal.tsx                # Modal → Rollback to previous version
-├── RequireAuth.tsx                  # Route guard (JWT validation)
-└── ui.tsx                           # Shared UI components
-
-lib/
-├── api.ts                           # Backend API wrapper
-├── auth.ts                          # Auth helpers (token parsing, expiration, etc.)
-└── adminClient.ts                   # Admin-only API helpers
-
-public/                               # Static assets (logos, images)
-
-.dockerignore
-.gitignore
-Dockerfile                            # Docker build for frontend image
-eslint.config.mjs                     # ESLint config for Next.js
-middleware.ts                         # Auth middleware for protected routes
-next.config.ts                        # Next.js runtime configuration
-package.json
-package-lock.json
-postcss.config.js                     # Tailwind/PostCSS setup
-tailwind.config.js                    # Tailwind theme + extensions
-tsconfig.json                         # TypeScript configuration
-README.md                             # Project documentation
-
-````
+1. A new user signs up through the platform.
+2. The account enters a pending approval state.
+3. The administrator reviews and approves the tenant request.
+4. A tenant environment is prepared with namespace-level isolation and access control.
+5. The tenant can deploy and manage applications from the dashboard.
+6. Prometheus collects metrics and Grafana visualizes them.
+7. Alertmanager processes important alerts and forwards them through email or webhook.
+8. New versions of applications can be released through blue-green deployment.
+9. Billing-related monitoring data can be used to support platform usage tracking.
 
 ---
 
-## 🔵 Blue-Green Deployment
+## Architecture Summary
 
-SmartDevOps includes a full **zero-downtime deployment** system:
+The project consists of several core subsystems working together:
 
-### 1️⃣ Prepare  
-User upgrades from `nginx:1.0` → `nginx:2.0`:
+### 1. Frontend
+A web interface built for platform users and administrators to interact with the system, manage applications, and access dashboards.
 
-- Old version continues running  
-- New version created as:  
-  `nginx-preview`
+### 2. Backend
+The backend handles authentication, tenant onboarding, deployment logic, blue-green operations, alert processing, and communication with Kubernetes resources.
 
-### 2️⃣ Promote  
-If new version is healthy:
+### 3. Kubernetes Layer
+Kubernetes is the execution environment where tenant applications run. The platform manages namespaces, deployments, services, ingress, and security-related resources.
 
-- Switch traffic to `nginx:2.0`  
-- Old version stops automatically  
+### 4. Monitoring Stack
+Prometheus collects metrics, Grafana visualizes them, and Alertmanager handles alert routing.
 
-### 3️⃣ Rollback  
-If something goes wrong:
+### 5. Security and Isolation Layer
+RBAC, namespace separation, resource quotas, secrets, and network policies help isolate tenants and protect the platform.
 
-- One click → return to previous stable version  
-
-This guarantees **zero downtime**, **safe upgrades**, and **instant rollback**.
+### 6. Billing and Usage Visibility
+Operational and monitoring data can be used to support billing dashboards or usage-based tracking workflows inside the platform.
 
 ---
 
-## 📊 Monitoring & Alerting
+## Core Systems
 
-### 🔹 Prometheus
-Collects metrics:
+### Authentication and Access Control
+The platform includes a secure authentication flow that controls how users access the system. New accounts are not immediately activated. Instead, they remain in a pending state until approved by an administrator. This improves security and prevents uncontrolled access.
 
-- CPU (per pod / per namespace)  
-- Memory  
-- Deployment replicas  
-- HTTP latency & errors (p95)  
+### Tenant Isolation
+Each tenant is isolated using Kubernetes namespaces, role bindings, quotas, and network-level controls. This separation helps ensure that one tenant cannot interfere with another tenant’s applications or resources.
 
-### 🔹 Grafana
-Two dashboards:
+### Deployment Management
+Users can deploy applications through the platform without manually interacting with raw Kubernetes manifests. The platform simplifies deployment and management tasks and reduces operational friction.
 
-1. **Client Dashboard** → simple & beginner-friendly  
-2. **DevOps Dashboard** → advanced visualization + logs (via Loki)
+### Blue-Green Deployment
+To reduce risk during updates, the platform supports blue-green deployment. A new version is prepared alongside the currently running version, validated, and then promoted. If something fails, rollback can be performed quickly.
 
-### 🔹 Alertmanager
+### Monitoring
+Prometheus and Grafana provide runtime visibility into the deployed applications and the platform itself. This helps users and administrators understand system health, resource consumption, and service behavior.
 
-Alerts include:
+### Alerting
+Alertmanager is used to process important alerts such as pod failures, unhealthy workloads, or resource-related issues. Alerts can be sent through email and also forwarded through webhooks to the backend.
 
-- Pod Crash  
-- Pod Pending too long  
-- High CPU  
-- High Memory  
-- Prometheus down  
-
-Alerts go to:
-
-- Email  
-- Webhook → backend → UI notification  
+### Billing
+The platform also considers billing-related observability, where collected platform data and infrastructure metrics can contribute to usage visibility and cost-awareness features. This is especially important in multi-tenant environments.
 
 ---
 
-## 🛡 Tenant Isolation
+## Technology Stack
 
-Each tenant receives:
-
-### ✔ A dedicated Kubernetes namespace  
-### ✔ RoleBinding restricting access  
-### ✔ ResourceQuota  
-### ✔ Calico NetworkPolicies isolating traffic  
-
-Example policy:
-
-```yaml
-apiVersion: crd.projectcalico.org/v1
-kind: GlobalNetworkPolicy
-metadata:
-  name: tenant-global-policy
-spec:
-  namespaceSelector: tenant == "true"
-  types: [Ingress, Egress]
-  ingress:
-    - action: Allow
-      source:
-        namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
-    - action: Allow
-      source:
-        namespaceSelector: "tenant == 'true'"
-  egress:
-    - action: Allow
-      destination:
-        namespaceSelector: "app.kubernetes.io/name == 'ingress-nginx'"
-    - action: Allow
-      destination:
-        namespaceSelector: "kube-system"
-        selector: "k8s-app == 'kube-dns'"
-    - action: Deny
-````
+| Layer | Technologies |
+|-------|--------------|
+| Frontend | Next.js, TypeScript, Tailwind CSS |
+| Backend | FastAPI, Python, SQLAlchemy |
+| Database | PostgreSQL |
+| Container Platform | Kubernetes |
+| Networking | Services, Ingress, Network Policies |
+| Monitoring | Prometheus, Grafana |
+| Alerting | Alertmanager |
+| Security | JWT, RBAC, Kubernetes Secrets, Namespace Isolation |
+| Deployment Strategy | Blue-Green Deployment |
 
 ---
 
-## 🔐 Security
+## Repository Structure
 
-* JWT authentication
-* HTTPS via Let's Encrypt
-* Backend runs with **read-only** RBAC (cannot delete deployments)
-* No privileged ports — ports below 1024 automatically rewritten
-* NetworkPolicies isolate tenants
-* Secrets stored as Kubernetes Secrets
-
----
-
-## 🚀 CI/CD Pipeline (GitHub Actions)
-
-### Backend Pipeline
-
-```
-docker buildx build -t raedbari/platform-api:${GITHUB_SHA} .
-docker push raedbari/platform-api:${GITHUB_SHA}
-kubectl -n default set image deploy/platform-api api=raedbari/platform-api:${GITHUB_SHA}
-kubectl -n default rollout status deploy/platform-api
-```
-
-### Frontend Pipeline
-
-```
-docker buildx build -t raedbari/frontend:${GITHUB_SHA} .
-docker push raedbari/frontend:${GITHUB_SHA}
-kubectl -n default set image deploy/frontend frontend=raedbari/frontend:${GITHUB_SHA}
-kubectl -n default rollout status deploy/frontend
-```
-
----
-
-## 👤 About the Developer
-
-**Name:** Raed Abdulbari Abdullah Alrubaidi  
-**Role:** Junior DevOps Engineer  
-**Email:** [raedbari203@gmail.com](mailto:raedbari203@gmail.com)  
-**Website:** [https://smartdevops.lat](https://smartdevops.lat)
-
-
----
-
-*Built with passion for automation, Kubernetes, and clean DevOps workflows.*
-
+```text
+.
+├── README.md
+├── docs/
+│   ├── overview.md
+│   ├── deployment-guide.md
+│   ├── bluegreen.md
+│   ├── monitoring.md
+│   ├── security.md
+│   └── Tenant-isolation.md
+├── K8s/
+│   ├── Backend/
+│   ├── frontend/
+│   ├── Ingress/
+│   ├── Monitoring/
+│   ├── Certificates/
+│   ├── Network/
+│   ├── Postgress/
+│   └── RBAC/
+└── Screenshots/
