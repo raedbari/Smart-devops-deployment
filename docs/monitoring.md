@@ -1,57 +1,139 @@
-### **monitoring.md - Alerting System and Prometheus/Grafana Overview**
+# Monitoring in Smart DevOps Platform
 
-#### **Overview of Monitoring in the Platform**
+The Smart DevOps Platform includes an integrated monitoring system based on **Prometheus**, **Grafana**, and **Alertmanager**.  
+This monitoring stack helps users and administrators observe application health, resource usage, and infrastructure issues in a Kubernetes-based environment.
 
-The platform uses **Prometheus** and **Grafana** to monitor the status of applications and services within **Kubernetes**. **Prometheus** is used to collect performance and resource data from **Pods** and **Namespaces**, while this data is displayed on **Grafana** dashboards for effective monitoring.
+The monitoring system is an important part of the platform because it provides visibility into deployed applications and supports alert-based response when operational problems occur.
 
-#### **Prometheus - Data Collection System**
+---
 
-**Prometheus** is an open-source tool for gathering metrics from systems and applications. In this platform, **Prometheus** is used to collect data related to:
+## 1. Monitoring Overview
 
-* **Pod Status**: Monitoring whether a Pod is running correctly, or if it's in **Pending** or **Failed** state.
-* **Resource Consumption**: Tracking **CPU** and **memory** usage at the Pod and Namespace levels.
-* **Applications**: Collecting data on the applications deployed in **Kubernetes**.
+The platform uses:
 
-**Prometheus Alert Rules**:
+- **Prometheus** to collect metrics from Kubernetes resources and workloads
+- **Grafana** to visualize these metrics through dashboards
+- **Alertmanager** to manage and route alerts through email or webhooks
 
-1. **PodDown**: Alert when a Pod enters the **Failed** state.
-2. **PodPendingTooLong**: Alert when a Pod stays in the **Pending** state for too long.
-3. **HighCPUUsage**: Alert when **CPU** usage in a Namespace exceeds 80%.
-4. **HighMemoryUsage**: Alert when **memory** usage in a Namespace exceeds 90%.
-5. **PrometheusDown**: Alert when **Prometheus** itself is down.
+Together, these components allow the platform to monitor application status, namespace health, and resource consumption in real time.
 
-#### **Alertmanager - Alert Management**
+---
 
-**Alertmanager** is a component of **Prometheus** that manages the alerts sent by **Prometheus**. Once **Alertmanager** receives an alert, it can forward it via various channels like email, **webhooks**, or other monitoring systems.
+## 2. Prometheus - Metrics Collection
 
-**Alertmanager Configuration**:
+**Prometheus** is responsible for collecting monitoring data from the Kubernetes environment.
 
-* **Email Notifications**: Critical alerts are sent to the registered email address.
-* **Ignoring**: Alerts of lower priority (like warnings) are ignored or sent only to a **webhook**.
+In this platform, it is used to collect metrics related to:
 
-#### **Grafana - Data Visualization**
+- **Pod Status**
+  - whether a Pod is running correctly or is in `Pending` or `Failed` state
 
-**Grafana** is an open-source tool used for visualizing and analyzing data from **Prometheus**. In this platform, **Grafana** is used to create interactive dashboards that enable users to monitor the health of applications and services in real-time.
+- **Resource Usage**
+  - CPU and memory consumption at Pod and Namespace level
 
-**Types of Grafana Dashboards**:
+- **Application Health**
+  - operational data related to deployed applications and service availability
 
-1. **Application Monitoring**: Dashboards showing metrics like **CPU** usage, **memory** usage, and the number of available Pods.
-2. **Namespace Monitoring**: Dashboards showing the status of an entire Namespace, including resource usage and Pod health.
+This data provides the foundation for both dashboards and alert rules.
 
-#### **How Prometheus and Grafana Integrate**
+---
 
-1. **Prometheus** collects data from **Kubernetes** and stores it.
-2. This data is fetched by **Grafana** to display it on interactive dashboards.
-3. Users can monitor the data in real-time on **Grafana**, and alerts can be configured based on this data.
+## 3. Prometheus Alert Rules
 
-#### **Alerting System**
+The platform defines alert rules in Prometheus to detect important issues in the system.
 
-The platform uses an alerting system to notify users when issues occur in the infrastructure. Alerts include:
+Examples include:
 
-* **Critical Alerts**: For issues like **PodDown** or **PrometheusDown**, these are sent via email or **webhook**.
-* **Warning Alerts**: For issues like **HighCPUUsage** or **HighMemoryUsage**, these are usually ignored but can be sent via **webhooks**.
+1. **PodDown**
+   - triggered when a Pod enters a failed or unhealthy state
 
-#### **Example Prometheus Alert Configuration**
+2. **PodPendingTooLong**
+   - triggered when a Pod remains in `Pending` longer than expected
+
+3. **HighCPUUsage**
+   - triggered when CPU usage in a Namespace exceeds 80%
+
+4. **HighMemoryUsage**
+   - triggered when memory usage in a Namespace exceeds 90%
+
+5. **PrometheusDown**
+   - triggered when Prometheus itself becomes unavailable
+
+These alerts help detect both application-level and platform-level problems.
+
+---
+
+## 4. Alertmanager - Alert Handling
+
+**Alertmanager** receives alerts fired by Prometheus and decides how they should be handled.
+
+In the platform, Alertmanager is used to:
+
+- send **critical alerts** by email
+- forward selected alerts through **webhooks**
+- reduce unnecessary noise by treating lower-priority alerts differently
+
+This allows the platform to separate alert generation from alert delivery.
+
+---
+
+## 5. Grafana - Dashboard Visualization
+
+**Grafana** is used to visualize the metrics collected by Prometheus.
+
+It provides dashboards that allow users and administrators to monitor:
+
+- application CPU usage
+- memory usage
+- pod availability
+- namespace resource status
+- general infrastructure health
+
+Grafana makes the collected monitoring data easier to understand and use during normal operation or troubleshooting.
+
+---
+
+## 6. Dashboard Types
+
+The platform supports different dashboard views depending on the monitoring purpose.
+
+### Application Monitoring
+
+These dashboards focus on a specific deployed application and typically show:
+
+- CPU usage
+- memory usage
+- pod status
+- available replicas
+
+### Namespace Monitoring
+
+These dashboards focus on the overall condition of a tenant namespace and may show:
+
+- aggregated resource usage
+- pod health
+- workload status across the namespace
+
+This helps provide both detailed application-level monitoring and broader namespace-level visibility.
+
+---
+
+## 7. Monitoring Flow
+
+The monitoring flow in the platform works as follows:
+
+1. **Prometheus** collects metrics from Kubernetes Pods and Namespaces
+2. Prometheus stores and evaluates these metrics
+3. If an alert condition is met, Prometheus fires an alert
+4. **Alertmanager** receives the alert and routes it
+5. **Grafana** displays the metrics in dashboards
+6. Users and administrators monitor the environment and react when needed
+
+This integration provides a complete monitoring and alerting workflow inside the platform.
+
+---
+
+## 8. Example Prometheus Alert Rule
 
 ```yaml
 groups:
@@ -63,10 +145,26 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "💥 High memory usage detected"
+          summary: "High memory usage detected"
           description: "Namespace {{ $labels.namespace }} is using more than 90% of its memory limit."
 ```
 
-#### **Summary**
+## 9. Monitoring in a Multi-Tenant Platform
 
-With **Prometheus** and **Grafana**, the system provides comprehensive monitoring of applications and infrastructure with immediate alerts for issues that could impact the system. The alerting system is based on the rules created in **Prometheus** and **Alertmanager** to distribute alerts via email and **webhooks**.
+Because Smart DevOps Platform is a multi-tenant system, monitoring should respect tenant boundaries.
+
+For this reason, monitoring views can be filtered by:
+
+- namespace
+- application
+- tenant context
+
+This helps ensure that each tenant only sees monitoring data related to its own environment, while administrators can access broader platform-level visibility.
+
+## 10. Summary
+
+The Smart DevOps Platform uses Prometheus, Grafana, and Alertmanager to provide monitoring, visualization, and alerting for Kubernetes-based applications.
+
+Prometheus collects metrics and evaluates alert rules, Grafana displays monitoring dashboards, and Alertmanager routes important alerts through email and webhooks.
+
+Together, these components help the platform detect failures early, track resource usage, and support more reliable application management.
