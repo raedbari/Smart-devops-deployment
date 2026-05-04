@@ -130,3 +130,56 @@ Example:
 
 ```yaml
 replicas: 3
+
+
+### 9. Application and Database Separation
+
+In the current prototype, some components may run on the same server or inside the same Kubernetes environment due to infrastructure cost limitations.
+
+In a production environment, the application layer and the database layer should be separated.
+
+The application services, such as the frontend, backend API, ingress, and monitoring components, should run inside the Kubernetes cluster or application servers.
+
+The database should run on a separate database server or, preferably, on a managed database service.
+
+#### Why This Is a Best Practice
+
+Separating the application and database layers provides several benefits:
+
+- Better security isolation
+- Easier database backup and recovery
+- Better performance management
+- Independent scaling of application and database resources
+- Reduced risk of application workloads affecting database stability
+- Easier maintenance and upgrades
+
+#### Important Note
+
+Separating the database into another server is a good production practice, but it does not automatically remove the database as a Single Point of Failure.
+
+If the database runs as only one instance on one server, it can still fail.
+
+To make the database highly available, the production setup should also include:
+
+- Database replication
+- Automated backups
+- Point-in-time recovery
+- Monitoring and alerting
+- External persistent storage
+- Disaster recovery plan
+- Optional managed database service such as AWS RDS, Azure Database for PostgreSQL, or Google Cloud SQL
+
+#### Production Solution
+
+In a production-ready environment, I would use one of the following approaches:
+
+Option 1: Separate database server
+
+```text
+Users
+  ↓
+Load Balancer / Ingress
+  ↓
+Kubernetes Cluster / Application Servers
+  ↓
+Separate PostgreSQL Database Server
