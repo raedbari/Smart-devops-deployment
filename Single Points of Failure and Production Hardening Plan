@@ -1,0 +1,132 @@
+# Single Points of Failure and Production Hardening Plan
+
+## Overview
+
+SmartDevOps Platform is currently implemented as a graduation project and prototype environment.  
+The goal of the project is to demonstrate DevOps automation, Kubernetes-based deployment, monitoring, and application management through a simplified platform interface.
+
+Because the project is running in a limited-cost environment, some components are intentionally deployed in a simplified way.  
+These components may represent Single Points of Failure in the current version.
+
+This document explains the existing Single Points of Failure and how they can be improved in a real production environment.
+
+---
+
+## What is a Single Point of Failure?
+
+A Single Point of Failure is any component in the system that can make the whole platform, or a critical part of it, unavailable if it fails.
+
+For example, if the database runs as a single instance and it fails, the backend may not be able to read or write data anymore.
+
+---
+
+## Current Single Points of Failure
+
+### 1. Single Kubernetes Node
+
+In the current prototype, the platform may run on a single server or a small Kubernetes setup.
+
+If this node fails, all workloads running on it may become unavailable.
+
+#### Risk
+
+- Application downtime
+- Backend and frontend unavailability
+- Monitoring services may stop
+- Database pod may become unavailable
+
+#### Production Solution
+
+In a production environment, this should be improved by using a multi-node Kubernetes cluster.
+
+Recommended improvements:
+
+- Use at least 3 worker nodes
+- Distribute workloads across multiple nodes
+- Use node affinity and anti-affinity rules
+- Enable automatic pod rescheduling
+- Use managed Kubernetes when possible, such as EKS, AKS, or GKE
+
+---
+
+### 2. Single PostgreSQL Instance
+
+The platform currently uses one PostgreSQL instance.
+
+If PostgreSQL fails, the backend cannot access important platform data.
+
+#### Risk
+
+- User data may become unavailable
+- Deployment records may not be accessible
+- Backend API may fail
+- Platform operations may stop
+
+#### Production Solution
+
+In production, the database should not run as a single standalone instance.
+
+Recommended improvements:
+
+- Use PostgreSQL replication
+- Use automated backups
+- Use point-in-time recovery
+- Use a managed database service such as AWS RDS
+- Separate database storage from the Kubernetes node
+- Monitor database health and storage usage
+
+---
+
+### 3. Local Storage
+
+The current setup may use local storage such as local-path-storage.
+
+This means persistent data can be tied to one specific node.
+
+#### Risk
+
+- If the node fails, the data may become unavailable
+- Pods may not be able to move safely to another node
+- Database recovery becomes more difficult
+
+#### Production Solution
+
+In production, storage should be independent from a single node.
+
+Recommended improvements:
+
+- Use network-based persistent storage
+- Use cloud block storage such as AWS EBS
+- Use distributed storage such as Longhorn, Ceph, or OpenEBS
+- Schedule regular volume backups
+- Store critical backups outside the cluster
+
+---
+
+### 4. Single Backend Replica
+
+If the backend API runs with only one replica, any crash or restart can make the API temporarily unavailable.
+
+#### Risk
+
+- API downtime
+- Failed deployment requests
+- Users cannot manage applications
+- Frontend may show errors
+
+#### Production Solution
+
+The backend should run with multiple replicas.
+
+Recommended improvements:
+
+- Run at least 2 or 3 backend replicas
+- Use Kubernetes Deployment with replicas
+- Add readiness and liveness probes
+- Use Horizontal Pod Autoscaler
+- Use rolling updates to avoid downtime during deployments
+
+Example:
+
+```yaml
+replicas: 3
